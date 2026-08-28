@@ -60,9 +60,17 @@ The stable design decisions are recorded in
 [`ADR 0002`](../adr/0002-bind-slider-root-interactions.md).
 The following evidence remains required before release:
 
-- callback order/count for drag, keyboard, and discrete changes;
-- marker sorting, duplicate, tie, and off-marker behavior;
-- a real consumer-provided native context menu for coexistence coverage.
+- marker sorting, duplicate, and tie behavior beyond the exercised marker contract.
+
+Temporary runtime instrumentation on the same Discord Stable build established that continuous
+wheel, native-keyboard, Precise Input Apply, and Precise Input Enter changes each call
+`commitValue` once, followed by one `asValueChanges` callback and one `onValueChange` callback,
+in that order. Marker wheel changes call `commitValue` once with the selected marker index and
+then call `onValueChange` once without `asValueChanges`. Native pointer interaction bypasses
+`commitValue`: `asValueChanges` follows pointer movement and `onValueChange` fires once at the
+end. Cancel, Escape, and clamped wheel no-ops invoke neither callback. The instrumentation was
+removed before commit; the detailed evidence boundary is recorded in
+[`COMPATIBILITY.md`](./COMPATIBILITY.md#runtime-verified).
 
 Discord Stable acceptance verified that a handled speaker-volume wheel event changed the
 displayed value while the Voice & Video page position stayed fixed. A React synthetic
@@ -188,8 +196,8 @@ deduplicated `Logger("BetterSliders")`, and return without suppressing native be
 
 Status: the component seam, live controlled value, native commit path, VolumeBooster
 boundary, non-passive root listener lifecycle, and handled-wheel page-scroll cancellation
-are verified. Callback-count comparison, marker edge cases, and a real native context-menu
-coexistence case remain open.
+are verified. Callback order/count and real native context-menu coexistence are also runtime
+verified. Marker sorting, duplicate, and tie cases remain open.
 
 ### Milestone 2 — Pure value policies
 
@@ -201,8 +209,9 @@ coexistence case remain open.
 
 Status: the first public-seam suite covers dynamic positive and negative bounds through
 `1000`, direction, modifier priority, reverse direction, fractional precision, marker
-navigation, disabled state, and invalid contracts. Vertical Slider and runtime
-callback-count coverage remain.
+navigation, disabled state, and invalid contracts. Runtime callback coverage is complete for
+the observed continuous and marker interactions. A shared vertical Slider was unavailable in
+the exercised Discord build and remains explicitly unverified.
 
 ### Milestone 3 — Precise Input
 
@@ -216,8 +225,9 @@ and their pure tests are implemented. Discord Stable runtime acceptance covers d
 right-click fallback, initial focus/select, Traditional Chinese UI and range errors,
 disabled Apply, valid Enter commit, Cancel without commit, and secondary-button drag
 suppression. The event-order regression currently has no correct automated seam without
-mocking Discord internals, so it retains a Discord runtime acceptance check. A real native
-context-menu coexistence case, Escape, marker UI, and additional Slider consumers remain.
+mocking Discord internals, so it retains a Discord runtime acceptance check. Native context-menu
+coexistence, Escape priority, marker UI, and additional Slider consumers are now runtime
+verified on the named Stable build.
 
 ### Milestone 4 — Localization and settings
 
@@ -255,9 +265,12 @@ recorded as unavailable rather than passed. Stable-key replacement is covered by
 coordinator test. Although the desktop driver cannot hold Shift/Ctrl while sending a wheel event,
 the project owner manually accepted Shift/Ctrl-plus-wheel adjustment on both live-stream and user-
 volume Sliders. Stream Cancel and native primary-button drag also passed with exact restoration to
-`100`. Callback order/count remains incomplete. The final release-candidate automated pipeline
-passed. The earlier mouse-Apply click-through observation remains non-repeatable. BetterSliders is
-not release-ready.
+`100`. Temporary runtime instrumentation completed callback order/count coverage for wheel,
+keyboard, pointer, Apply, Enter, Cancel, Escape, clamped no-op, and marker wheel paths, then was
+removed before commit. The final release-candidate automated pipeline passed. The earlier
+mouse-Apply click-through observation remains non-repeatable. Marker sorting, duplicate, and tie
+runtime cases and the explicit pending matrix repetitions remain, so BetterSliders is not
+release-ready.
 
 ## Acceptance scenarios
 

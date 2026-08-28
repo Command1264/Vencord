@@ -20,9 +20,11 @@ not a runtime result: each entry below states exactly which kind of evidence exi
 | --- | --- |
 | Discord client | Stable `1.0.9255` |
 | Vencord base | `bc680139be4526aa5525d33fbac8a271eb0cfd02` |
-| BetterSliders evidence HEAD | `67c52b7ecbf2f42782a6f2160d68167808bc824e` |
+| BetterSliders product-code HEAD | `67c52b7ecbf2f42782a6f2160d68167808bc824e` |
+| Callback measurement checkout | `aa397776` (documentation-only commit above the product-code HEAD) |
 | Branch | `codex/feat/better-sliders-poc` |
-| Remote state at evidence capture | `origin/codex/feat/better-sliders-poc` at the same HEAD |
+| Remote state at callback capture | `origin/codex/feat/better-sliders-poc` at `67c52b7ecbf2f42782a6f2160d68167808bc824e` |
+| Instrumentation disposition | Temporary and uncommitted; removed before this evidence update |
 
 The Discord version and base-bound runtime discoveries are recorded in the
 [Roadmap](./ROADMAP.md#effective-slider-contract-discovery),
@@ -50,6 +52,7 @@ document are limited to that build and the explicitly named consumers.
 | Native wheel value feedback | A user-volume wheel step displayed Discord's native `105%` Tooltip even though the pointer was on the track away from the grabber. The Tooltip disappeared after the 1000 ms ownership window, and the test volume was restored exactly to `110`. | Runtime verified on the named Stable baseline for native percent formatting, transient visibility, ref-rerender survival, and state restoration. Consumer-provided custom `onValueRender` output still needs a separate runtime pass. |
 | Custom native wheel value feedback | A Notification Timeout wheel step displayed the consumer's native `5.06s` value bubble. After the 1000 ms ownership window, visibility returned to Discord's normal hover behavior; the value was restored to `5s`. Notification Log Limit was also restored to `50` after marker-slider diagnostics. | Runtime verified on the named Stable baseline for a consumer-formatted continuous Slider. The marker Slider does not render a native hover bubble, so BetterSliders deliberately adds no duplicate label. |
 | Light and custom theme surfaces | In Discord Light, the BetterSliders settings dialog and Precise Input dialog were visually inspected with their native menu/Modal layering intact. The same surfaces were inspected with the installed Vencord Local Theme `Fallout 4 Terminal`; the theme supplied its own typography, colors, borders, and focus styling without breaking layout or interaction. | Runtime visual evidence on the named Stable baseline. The Local Theme was disabled afterward and Discord was restored to the user's original second Dark preset. User volume remained `110`; stream volume was restored to `100`. |
+| Shared Slider callback order/count | Continuous wheel, native keyboard, Precise Input Enter, and Precise Input Apply each produced one `commitValue`, then one `asValueChanges`, then one `onValueChange`. A marker wheel move produced one `commitValue(value, markerIndex)` and one `onValueChange`, with no `asValueChanges`. Cancel, Escape, and continuous/marker boundary no-ops produced no callbacks. Native pointer input bypassed `commitValue`: `asValueChanges` followed movement and `onValueChange` fired once at the end. | Runtime traces from microphone volume and Notification Log Limit on the named Stable baseline. A pointer click emitted one interim callback; the sampled drag emitted two because the automation generated two movement updates. In this build the final pointer `onValueChange` argument was the pre-interaction value while interim callbacks carried movement values; this records native behavior, not a BetterSliders transformation. Temporary instrumentation was removed before commit, and microphone volume `100` plus Log Limit `50` were restored exactly. |
 
 ## User-reported manual acceptance
 
@@ -126,8 +129,8 @@ not an active release blocker unless it recurs under a repeatable user or runtim
   cleanup that distinguishes a rerender ref handoff from a real detach.
 - [`index.ts`](../../src/plugins/betterSliders/index.ts) reads live final props/state at event
   time, delegates handled changes once through native `commitValue`, skips disabled/invalid
-  contracts, and only then prevents the wheel default. Static inspection alone cannot prove
-  callback order/count in the Discord bundle.
+  contracts, and only then prevents the wheel default. The runtime callback row above verifies
+  the resulting observed callback order/count; production source remains uninstrumented.
 - [`volumeBooster/index.ts`](../../src/plugins/volumeBooster/index.ts) changes the caller's
   `maxValue` expression for user and stream volume. BetterSliders has no named VolumeBooster
   dependency and consumes the shared Slider's final runtime props/state instead, as required
@@ -147,7 +150,7 @@ not an active release blocker unless it recurs under a repeatable user or runtim
 | Native context-menu coexistence | Consumer context menus remain available, stream wheel input leaves its menu open, and Precise Input preserves the active stream menu while temporarily elevating its Modal above the overlapping menu area. | **Runtime verified** for stream menu availability, wheel coexistence, menu preservation, and Precise Input layering. The earlier user-menu run predates the layer-elevation policy. | Retest both user and stream menus on the release candidate, including one manual rapid-repeat trigger. |
 | VolumeBooster-modified user/stream range | User volume exposed `0..1000` and accepted exact `250` plus boundary `1000`, while rejecting `1001`. Stream volume now has the same end-to-end exact-input evidence from original `100` through `250`, invalid `1001`, boundary `1000`, Cancel, native drag, and exact restoration. The project owner manually accepted Shift/Ctrl wheel adjustment on both consumers. | **Runtime verified end to end** for the directly exercised paths; **user-reported manual acceptance** for modifier-wheel behavior. | No additional VolumeBooster-specific range step is currently required; repeat after material Slider or VolumeBooster changes. |
 | Dark, light, and custom themes | Dark, Discord Light, and the installed Vencord Local Theme `Fallout 4 Terminal` were visually inspected. BetterSliders settings and Precise Input remained usable, native menus stayed beneath the Modal, and theme-owned styling was preserved. | **Runtime verified** for the named three theme configurations. | Repeat after material CSS, Discord Modal, or theme-token changes. |
-| Callback order/count | Runtime code calls `commitValue` once for one handled discrete action; native callback behavior has not been measured. | **Static evidence only** / **not exercised**. | Instrument a representative Slider and record callback order/count for drag, keyboard, wheel, valid Apply/Enter, Cancel/Escape, bounds, and marker moves. Remove instrumentation before commit. |
+| Callback order/count | Continuous discrete changes produced one `commitValue -> asValueChanges -> onValueChange` sequence. Marker wheel produced one `commitValue -> onValueChange` sequence. Native pointer input bypassed `commitValue`, emitted movement-driven `asValueChanges`, and ended with one `onValueChange`. Cancel, Escape, and clamped no-ops emitted no callbacks. | **Runtime verified** on microphone volume and Notification Log Limit; temporary instrumentation was removed before commit. | Repeat after a material Discord shared-Slider implementation change, and exercise duplicate/tied marker contracts if such a consumer becomes available. |
 
 ## Validation record
 
@@ -156,13 +159,14 @@ must rerun the relevant checks before release.
 
 | Validation | Recorded result | Scope caveat |
 | --- | --- | --- |
-| `pnpm test:better-sliders` | **Passed: 37/37** in the current working tree after the event-priority and native wheel-tooltip changes. | Pure BetterSliders suites only. |
-| TypeScript (`pnpm testTsc`) | **Passed** in the current working tree after the menu-preserving layer fix. | Reported implementation check. |
-| ESLint (`pnpm lint src/plugins/betterSliders`) | **Passed** in the current working tree after the menu-preserving layer fix. | Plugin-scoped lint result. |
-| Discord desktop build (`pnpm build`) | **Passed** in the current working tree after the menu-preserving layer fix. | Build success is not a consumer compatibility run. |
-| Full [`pnpm test`](../../package.json) pipeline | **Passed** in the current working tree after the event-priority and native wheel-tooltip changes, including standalone build, TypeScript, ESLint, stylelint, and plugin-list generation. | This is an automated build/static-validation result, not a Discord consumer compatibility run. |
+| `pnpm test:better-sliders` | **Passed: 37/37** after callback capture and instrumentation removal. | Pure BetterSliders suites only. |
+| TypeScript (`pnpm testTsc`) | **Passed** after callback capture and instrumentation removal. | Reported implementation check. |
+| ESLint (`pnpm lint src/plugins/betterSliders`) | **Passed** after callback capture and instrumentation removal. | Plugin-scoped lint result. |
+| Discord desktop build (`pnpm build`) | **Passed** after callback capture and instrumentation removal; a Discord reload confirmed the diagnostic panel was absent. | Build success is not a consumer compatibility run. |
+| Full [`pnpm test`](../../package.json) pipeline | **Passed** after callback capture and instrumentation removal, including standalone build, TypeScript, ESLint, stylelint, and plugin-list generation. | This is an automated build/static-validation result, not a Discord consumer compatibility run. |
 
 Before release, rerun the complete `pnpm test` pipeline at the final release candidate and
-record its commit. Keep every unexercised matrix row explicit; the current evidence does not
-justify calling Milestone 5 or the plugin release-ready. Reopen the mouse-Apply anomaly only
-if a repeatable user or runtime path reproduces it.
+record its commit. Keep every unexercised matrix row explicit; marker sorting, duplicate, and
+tie behavior plus the listed release-candidate repetitions remain evidence gaps, so the current
+record does not justify calling Milestone 5 or the plugin release-ready. Reopen the mouse-Apply
+anomaly only if a repeatable user or runtime path reproduces it.
