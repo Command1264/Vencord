@@ -92,6 +92,8 @@ changes to `commitValue`.
 
 - Open a native Vencord/Discord Modal from a Supported Slider's context-menu interaction,
   without destroying a pre-existing native context-menu capability.
+- A secondary-button press must not enter native drag handling or change the Slider before
+  Precise Input opens. Primary-button dragging remains native.
 - Initialize the field from the live controlled value, safely normalize continuous pointer
   residue to the nearest permitted keyboard step, focus it, and select its contents.
 - Allow intermediate input states while typing. Commit only once on valid Apply or Enter;
@@ -198,8 +200,10 @@ callback-count coverage remain.
 Status: strict decimal syntax, finite/range/step/marker validation, safe display formatting,
 and their pure tests are implemented. Discord Stable runtime acceptance covers direct
 right-click fallback, initial focus/select, Traditional Chinese UI and range errors,
-disabled Apply, valid Enter commit, and Cancel without commit. A real native context-menu
-coexistence case, Escape, marker UI, and additional Slider consumers remain.
+disabled Apply, valid Enter commit, Cancel without commit, and secondary-button drag
+suppression. The event-order regression currently has no correct automated seam without
+mocking Discord internals, so it retains a Discord runtime acceptance check. A real native
+context-menu coexistence case, Escape, marker UI, and additional Slider consumers remain.
 
 ### Milestone 4 — Localization and settings
 
@@ -235,6 +239,8 @@ and the custom localized settings component remain.
 10. A runtime locale change updates newly opened UI and, where subscribed, existing UI.
 11. Disabled or invalid Sliders produce no BetterSliders action and preserve native events.
 12. VolumeBooster-modified final max values appear without a VolumeBooster dependency.
+13. Right-clicking away from the current handle opens Precise Input without first changing
+    the Slider value; left-click dragging remains native.
 
 ## Known constraints
 

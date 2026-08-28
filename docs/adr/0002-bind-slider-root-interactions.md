@@ -19,7 +19,10 @@ coexist with a context menu opened by a Slider consumer or ancestor when one exi
 The source patch composes the Slider root ref and delegates it to a plugin-owned
 `bindSlider(instance, root)` adapter. The adapter preserves `containerRef.current` and
 attaches one native `wheel` listener with `{ passive: false }` plus one native
-`contextmenu` listener to that exact root.
+`contextmenu` listener to that exact root. Capture-phase `pointerdown` and `mousedown`
+listeners stop propagation only for the secondary button on a Slider that can open Precise
+Input. They do not call `preventDefault()`, so the later context-menu event remains intact
+while Discord's delegated drag handler cannot commit the right-click position first.
 
 Bindings are idempotent per Slider instance. Ref changes and ref-null unmounts remove the
 old listeners, and plugin stop removes every active binding. Handled wheel events commit
@@ -50,7 +53,7 @@ and plugin-stop cleanup with a smaller patch surface.
 ## Consequences
 
 - Handled wheel input can prevent page scrolling without changing native Slider rendering.
-- Each mounted shared Slider has two lightweight native listeners while the plugin runs.
+- Each mounted shared Slider has four lightweight native listeners while the plugin runs.
 - The source patch depends on the observed `containerRef` render anchor and needs a runtime
   smoke test when Discord changes its Slider bundle.
 - Direct Modal fallback is verified for the current Slider root. Coexistence with a real

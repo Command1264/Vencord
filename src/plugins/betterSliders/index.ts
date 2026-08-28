@@ -42,6 +42,7 @@ let isStarted = false;
 interface SliderBinding {
     contextMenuListener: (event: MouseEvent) => void;
     instance: SliderInstance;
+    secondaryButtonDownListener: (event: MouseEvent) => void;
     root: HTMLDivElement;
     wheelListener: (event: WheelEvent) => void;
 }
@@ -126,6 +127,16 @@ function handleContextMenu(instance: SliderInstance, event: MouseEvent) {
     }
 }
 
+function handleSecondaryButtonDown(instance: SliderInstance, event: MouseEvent) {
+    try {
+        if (event.button !== 2 || !getPreciseInputContract(instance)) return;
+
+        event.stopPropagation();
+    } catch (error) {
+        warnOnce(instance, error);
+    }
+}
+
 function handleWheel(instance: SliderInstance, event: WheelEvent) {
     try {
         const contract: EffectiveSliderContract = {
@@ -154,6 +165,8 @@ function handleWheel(instance: SliderInstance, event: WheelEvent) {
 
 function removeBinding(binding: SliderBinding) {
     binding.root.removeEventListener("contextmenu", binding.contextMenuListener);
+    binding.root.removeEventListener("mousedown", binding.secondaryButtonDownListener, true);
+    binding.root.removeEventListener("pointerdown", binding.secondaryButtonDownListener, true);
     binding.root.removeEventListener("wheel", binding.wheelListener);
     activeBindings.delete(binding);
     bindings.delete(binding.instance);
@@ -210,12 +223,15 @@ export default definePlugin({
         const binding: SliderBinding = {
             contextMenuListener: event => handleContextMenu(instance, event),
             instance,
+            secondaryButtonDownListener: event => handleSecondaryButtonDown(instance, event),
             root,
             wheelListener: event => handleWheel(instance, event)
         };
         bindings.set(instance, binding);
         activeBindings.add(binding);
         root.addEventListener("contextmenu", binding.contextMenuListener);
+        root.addEventListener("mousedown", binding.secondaryButtonDownListener, true);
+        root.addEventListener("pointerdown", binding.secondaryButtonDownListener, true);
         root.addEventListener("wheel", binding.wheelListener, { passive: false });
     }
 });
