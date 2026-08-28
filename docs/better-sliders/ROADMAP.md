@@ -1,0 +1,240 @@
+# BetterSliders Roadmap
+
+## Product intent
+
+BetterSliders is a generic Discord Slider interaction enhancer. It adds two optional ways to
+operate a Supported Slider:
+
+1. hover and use the wheel for incremental adjustment;
+2. right-click and enter one Precise Input value.
+
+Native dragging, keyboard operation, presentation, and feature ownership remain with the
+original Slider. BetterSliders changes values only through the Slider's effective native
+change behavior; it never writes directly to feature stores or visual handle styles.
+
+## Non-negotiable invariants
+
+- Read the Effective Slider Contract at interaction time. Never hard-code `0..100`, assume
+  a percentage, or retain a mount-time value as the current value.
+- Observe final runtime props after other patches. Do not import or query VolumeBooster or
+  any other range-changing plugin by name.
+- Fail open: invalid props, missing patches, or BetterSliders exceptions disable the
+  enhancement while leaving the native Slider operational.
+- Do not scan the DOM, depend on generated Discord CSS classes, or run a global
+  `MutationObserver`.
+- Do not handle disabled Sliders. Do not cancel their context menu or page scrolling.
+- Do not convert arbitrary `onValueRender` React nodes to strings. Prefer a safe native text
+  formatter and otherwise display the raw numeric value without an invented unit.
+- BetterSliders-owned UI text goes through the plugin dictionary. Supported locales are
+  English and explicit Traditional Chinese identifiers; all other locales, including
+  Simplified Chinese, fall back to English.
+- CSS classes use the `vc-better-sliders-` namespace and theme variables/components rather
+  than hard-coded Discord colors.
+
+## Effective Slider Contract discovery
+
+Static repository evidence establishes that Discord's shared Slider is a stateful class and
+that its live value is stored in instance state. Its props expose `initialValue`,
+`defaultValue`, `minValue`, `maxValue`, `keyboardStep`, `markers`, `stickToMarkers`,
+`disabled`, `getAriaValueText`, `onValueChange`, and `asValueChanges`.
+
+Runtime inspection on Discord Stable `1.0.9255` with Vencord base
+`bc680139be4526aa5525d33fbac8a271eb0cfd02` established that:
+
+- live values and effective bounds are available as `state.value`, `state.min`, and
+  `state.max`;
+- effective sorted markers and the closest marker index are maintained in instance state;
+- the observed defaults are `minValue: 0`, `maxValue: 100`, and `keyboardStep: 1`;
+- native `commitValue(value, markerIndex?)` updates state and invokes the component's native
+  change callbacks only when the committed value differs;
+- a root `onWheel` injection anchored beside `handleKeyDown` receives actual Slider wheel
+  events; and
+- VolumeBooster changes caller-supplied maximum expressions, so the Slider's final runtime
+  props/state are the correct compatibility boundary.
+
+The stable design decision is recorded in
+[`docs/adr/0001-enhance-the-shared-slider-component.md`](../adr/0001-enhance-the-shared-slider-component.md).
+The following evidence remains required before release:
+
+- callback order/count for drag, keyboard, and discrete changes;
+- marker sorting, duplicate, tie, and off-marker behavior;
+- existing root context-menu behavior;
+- reliable page-scroll cancellation for handled wheel events. The automated synthetic-wheel
+  smoke test reached the handler but did not prove cancellation, so this is not yet an
+  accepted runtime behavior.
+
+Code must not call both callbacks merely because both are present; it delegates discrete
+changes to `commitValue`.
+
+## Wheel Adjustment contract
+
+- Wheel up increases and wheel down decreases by default; reverse-wheel swaps direction.
+- `deltaY === 0` is ignored. Delta magnitude and `deltaMode` never become numeric Slider
+  movement; only direction is consumed.
+- One wheel event produces at most one logical adjustment.
+- `Ctrl` has priority over `Shift`; multipliers are not multiplied together. Defaults are
+  normal `1`, Shift `5`, and Ctrl `10`. Alt has no behavior in the first release.
+- Prefer the Slider's effective keyboard step. A fallback may be introduced only after
+  runtime discovery and must be encapsulated behind one policy function.
+- Normalize arithmetic to the effective step precision; never apply one fixed `toFixed`
+  precision to every Slider.
+- With `stickToMarkers`, navigate to the adjacent marker rather than inventing intermediate
+  values.
+- Clamp the result at the effective boundaries without showing an error.
+- Call `preventDefault()` only after an eligible Slider event has been successfully handled.
+
+## Precise Input contract
+
+- Open a native Vencord/Discord Modal from a Supported Slider's context-menu interaction,
+  without destroying a pre-existing native context-menu capability.
+- Initialize the field from the live current value, focus it, and select its contents.
+- Allow intermediate input states while typing. Commit only once on valid Apply or Enter;
+  Cancel and Escape never invoke a Slider callback.
+- Trim surrounding whitespace. Empty input has its own validation reason.
+- Accept ordinary signed decimal notation such as `0`, `12.34`, `.5`, `-0.5`, and `-.25`.
+- Reject partial parses, malformed decimals, `NaN`, infinities, and scientific notation.
+- Convert only after full-string syntax validation and require a finite result.
+- Reject values below or above the range. Precise Input never silently clamps.
+- When `stickToMarkers` is active, accept only an effective marker. Do not silently snap.
+- Represent validation as a discriminated result with explicit reasons rather than a mixed
+  string/number/null value.
+
+## Localization and settings
+
+- Read Discord's current UI locale from `LocaleStore.locale`, not `navigator.language`.
+- React UI that must follow runtime changes subscribes through `useStateFromStores`.
+- Keep English and Traditional Chinese dictionaries together behind typed keys and one
+  interpolation function. Missing Traditional Chinese keys fall back to English; missing
+  English keys warn once and render the key rather than throwing.
+- Full runtime-localized settings require an `OptionType.COMPONENT` settings UI because
+  standard setting metadata is static. This is an MVP phase, not part of the wheel PoC.
+- Initial settings: Precise Input enabled, Wheel Adjustment enabled, Shift multiplier `5`,
+  Ctrl multiplier `10`, and reverse wheel disabled. Multipliers must be finite and limited
+  to a documented positive range such as `1..100`.
+
+## Architecture boundaries
+
+- `index.ts`/`index.tsx`: plugin metadata, source patches, and thin runtime adapters; use
+  `.tsx` only once the module contains JSX.
+- `sliderUtils.ts`: pure Effective Slider Contract math for Wheel Adjustment.
+- `validation.ts`: pure Precise Input parsing and allowed-value validation.
+- `i18n.ts`: locale normalization, dictionaries, interpolation, and fallbacks.
+- `components/ValueInputModal.tsx`: modal state and rendering only.
+- `settings.tsx`: persisted settings and the reactive localized settings component.
+- `tests/`: public-seam behavior tests for pure modules.
+
+Runtime event handlers catch unexpected failures, report actionable context through a
+deduplicated `Logger("BetterSliders")`, and return without suppressing native behavior.
+
+## Interaction, accessibility, and performance rules
+
+- Attach interactions to the Slider root so the bar, handle, markers, labels, and nested
+  children behave consistently. Do not patch a generated child class.
+- Do not open a Modal, create a timer, or perform a webpack lookup on every wheel event.
+  Resolve component/module dependencies once or lazily at module scope.
+- Treat each discrete wheel or trackpad event as one directional adjustment regardless of
+  `deltaMode` or magnitude. Add normalization/debounce only after measured touchpad evidence.
+- An invalid or non-finite current value disables the enhancement. A finite value outside
+  the current range is not changed during render; only an explicit user interaction may
+  move it according to normal range policy.
+- Native Slider rerendering owns handle position, width, and transform. BetterSliders never
+  writes visual position directly.
+- Build the Modal from existing Discord/Vencord Modal, TextInput, Button, Text, and Forms
+  primitives. Inputs need a visible label or `aria-label`; errors should be associated with
+  `aria-describedby`; Apply uses native disabled semantics.
+- Verify dark, light, and custom themes. Any plugin CSS uses Discord variables and the
+  `vc-better-sliders-` namespace.
+- Production code must not log per-wheel values. Debug traces are temporary, removable,
+  and never committed.
+
+## Delivery phases
+
+### Milestone 0 — Repository and durable guidance
+
+- Configure GitHub Issues, triage roles, domain routing, and this Roadmap.
+- Keep the one-time drafting source out of Git and remove it after this Roadmap is verified.
+- Treat this fork as the delivery target. Any future upstream contribution requires a
+  human-led rewrite and human-authored communication under Vencord's contribution policy.
+
+### Milestone 1 — Runtime discovery and wheel tracer
+
+- Build a development bundle and inspect the current Discord Slider module.
+- Record state, defaults, markers, keyboard behavior, callbacks, and context-menu behavior.
+- Establish a fail-open global component seam using stable anchors.
+- Implement one wheel event → one native logical adjustment for dynamic integer ranges.
+- Verify final props reflect VolumeBooster without any named integration.
+
+Status: the component seam, live contract, native commit path, and VolumeBooster boundary
+are verified. Page-scroll cancellation, callback-count comparison, marker edge cases, and
+context-menu coexistence remain open.
+
+### Milestone 2 — Pure value policies
+
+- Add vertical-slice tests for wheel direction, bounds, modifiers, fractional precision,
+  invalid contracts, and marker navigation.
+- Implement the minimum pure policy required by each failing test.
+- Cover dynamic ranges (`0..100`, `0..200`, `0..1000`), negative minima, and fractional
+  steps.
+
+Status: the first public-seam suite covers dynamic positive and negative bounds through
+`1000`, direction, modifier priority, reverse direction, fractional precision, marker
+navigation, disabled state, and invalid contracts. Vertical Slider and runtime
+callback-count coverage remain.
+
+### Milestone 3 — Precise Input
+
+- Add parsing and range-validation slices before Modal integration.
+- Build the native Modal with focus/select, Apply/Cancel, Enter/Escape, accessible labels,
+  disabled Apply, and localized errors.
+- Add marker-only validation and safe value formatting.
+
+Status: strict decimal syntax, finite/range/step/marker validation, and their pure tests are
+implemented. Context-menu integration, Modal UI, safe display formatting, and runtime
+acceptance remain.
+
+### Milestone 4 — Localization and settings
+
+- Add English and Traditional Chinese dictionaries and explicit fallback tests.
+- Subscribe Modal and custom settings UI to Discord locale changes.
+- Add validated feature toggles, multipliers, and reverse-wheel behavior.
+
+### Milestone 5 — Compatibility and release evidence
+
+- Exercise user volume, stream volume, other Discord settings, a Vencord-created Slider,
+  vertical orientation where available, disabled state, and native context-menu coexistence.
+- Exercise VolumeBooster-modified ranges and at least one non-volume dynamic range.
+- Run unit tests, typecheck, lint, stylelint, plugin list generation, and standalone build.
+- Document all runtime cases not exercised; do not convert assumptions into claims.
+
+## Acceptance scenarios
+
+1. `0..100`, current `50`: wheel up produces `51`; wheel down returns to `50`.
+2. `0..1000`, current `500`: Precise Input `750` commits exactly `750`.
+3. Out-of-range `1001` is rejected and Apply remains disabled.
+4. `abc`, `50abc`, `12.3.4`, `NaN`, infinities, and `1e3` are rejected.
+5. `.5` and a permitted negative decimal are accepted.
+6. Wheel remains at max/min when moving beyond a boundary.
+7. Step `0.1` never exposes `0.30000000000000004`.
+8. Markers `[1, 2, 4, 8]` with marker sticking navigate in marker order; Precise Input `3`
+   is rejected.
+9. English renders English, explicit Traditional Chinese renders Traditional Chinese, and
+   Japanese or Simplified Chinese renders English.
+10. A runtime locale change updates newly opened UI and, where subscribed, existing UI.
+11. Disabled or invalid Sliders produce no BetterSliders action and preserve native events.
+12. VolumeBooster-modified final max values appear without a VolumeBooster dependency.
+
+## Known constraints
+
+- Custom components that do not use Discord's shared Slider are out of scope.
+- Fake DOM/CSS sliders are out of scope.
+- Hidden business scaling not exposed by the UI Slider contract is out of scope.
+- Discord bundle changes can invalidate the patch; failure must leave native Sliders intact.
+- Runtime claims remain provisional until exercised against the current Discord build.
+
+## Delivery checklist
+
+- Report unit, type, lint, style, plugin-list, and standalone-build results separately.
+- Report which Discord Slider contexts were exercised and which remain untested.
+- Report branch, Worktree, commit, push, PR, merge, and cleanup state explicitly.
+- Do not call the plugin release-ready while any Milestone 5 scenario or the handled-wheel
+  page-scroll requirement remains unverified.
