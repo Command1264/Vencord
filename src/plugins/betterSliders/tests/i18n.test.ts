@@ -39,4 +39,11 @@ describe("translate", () => {
         assert.equal(translate("zh-TW", "error.invalidNumber"), "請輸入完整的十進位數字。");
         assert.equal(translate("zh-TW", "contextMenu.preciseInput"), "精確設定數值…");
     });
+
+    it("localizes the complete settings surface", () => {
+        assert.equal(translate("en-US", "settings.preciseInput.title"), "Precise Input");
+        assert.equal(translate("en-US", "settings.multiplier.error"), "Enter a whole number from 1 to 100.");
+        assert.equal(translate("zh-TW", "settings.wheelAdjustment.title"), "滾輪調整");
+        assert.equal(translate("zh-Hant", "settings.ctrlMultiplier.title"), "Ctrl 倍率");
+    });
 });

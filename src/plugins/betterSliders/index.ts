@@ -12,6 +12,7 @@ import { LocaleStore, Menu, openModal, React } from "@webpack/common";
 
 import { ValueInputModal } from "./components/ValueInputModal";
 import { translate } from "./i18n";
+import { getBetterSlidersSettings, settings } from "./settings";
 import { EffectiveSliderContract, getWheelAdjustment } from "./sliderUtils";
 import { PreciseInputContract } from "./validation";
 
@@ -111,6 +112,8 @@ function openPreciseInput(instance: SliderInstance, contract: PreciseInputContra
 
 function handleContextMenu(instance: SliderInstance, event: MouseEvent) {
     try {
+        if (!getBetterSlidersSettings().preciseInput) return;
+
         const contract = getPreciseInputContract(instance);
         if (!contract) return;
 
@@ -120,7 +123,9 @@ function handleContextMenu(instance: SliderInstance, event: MouseEvent) {
             if (pendingContextMenu !== pending) return;
 
             pendingContextMenu = null;
-            openPreciseInput(instance, contract);
+            if (getBetterSlidersSettings().preciseInput) {
+                openPreciseInput(instance, contract);
+            }
         }, 0);
     } catch (error) {
         warnOnce(instance, error);
@@ -129,7 +134,9 @@ function handleContextMenu(instance: SliderInstance, event: MouseEvent) {
 
 function handleSecondaryButtonDown(instance: SliderInstance, event: MouseEvent) {
     try {
-        if (event.button !== 2 || !getPreciseInputContract(instance)) return;
+        if (event.button !== 2
+            || !getBetterSlidersSettings().preciseInput
+            || !getPreciseInputContract(instance)) return;
 
         event.stopPropagation();
     } catch (error) {
@@ -139,6 +146,9 @@ function handleSecondaryButtonDown(instance: SliderInstance, event: MouseEvent) 
 
 function handleWheel(instance: SliderInstance, event: WheelEvent) {
     try {
+        const currentSettings = getBetterSlidersSettings();
+        if (!currentSettings.wheelAdjustment) return;
+
         const contract: EffectiveSliderContract = {
             closestMarkerIndex: instance.state.closestMarkerIndex,
             current: getCurrentValue(instance),
@@ -150,9 +160,9 @@ function handleWheel(instance: SliderInstance, event: WheelEvent) {
             stickToMarkers: instance.props.stickToMarkers
         };
         const adjustment = getWheelAdjustment(contract, event, {
-            ctrlMultiplier: 10,
-            reverse: false,
-            shiftMultiplier: 5
+            ctrlMultiplier: currentSettings.ctrlMultiplier,
+            reverse: currentSettings.reverseWheel,
+            shiftMultiplier: currentSettings.shiftMultiplier
         });
         if (!adjustment.handled) return;
 
@@ -177,8 +187,14 @@ function patchNativeContextMenu(_navId: string, children: Array<React.ReactEleme
     if (!pending) return;
 
     pendingContextMenu = null;
+    if (!getBetterSlidersSettings().preciseInput) return;
+
     children.push(React.createElement(Menu.MenuItem, {
-        action: () => openPreciseInput(pending.instance, pending.contract),
+        action: () => {
+            if (getBetterSlidersSettings().preciseInput) {
+                openPreciseInput(pending.instance, pending.contract);
+            }
+        },
         id: "vc-better-sliders-precise-input",
         key: "vc-better-sliders-precise-input",
         label: translate(LocaleStore.locale, "contextMenu.preciseInput")
@@ -189,6 +205,7 @@ export default definePlugin({
     name: "BetterSliders",
     description: "Enhances Discord sliders with precise right-click value input and mouse-wheel adjustment.",
     authors: [Devs.Command1264],
+    settings,
 
     patches: [{
         find: "markDash",

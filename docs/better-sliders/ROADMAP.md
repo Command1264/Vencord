@@ -212,8 +212,9 @@ context-menu coexistence case, Escape, marker UI, and additional Slider consumer
 - Add validated feature toggles, multipliers, and reverse-wheel behavior.
 
 Status: English and Traditional Chinese dictionaries, interpolation, explicit locale
-fallback tests, and reactive Modal locale subscription are implemented. Persisted settings
-and the custom localized settings component remain.
+fallback tests, reactive Modal locale subscription, validated persisted settings, and the
+custom localized settings component are implemented. Discord runtime acceptance of the
+settings UI, immediate feature toggles, multipliers, and reverse-wheel behavior remains.
 
 ### Milestone 5 — Compatibility and release evidence
 

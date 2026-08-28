@@ -18,7 +18,18 @@ const english = {
     "error.nonFinite": "Enter a finite decimal number.",
     "modal.range": "Allowed range: {min} to {max}",
     "modal.title": "Set exact slider value",
-    "modal.valueLabel": "Slider value"
+    "modal.valueLabel": "Slider value",
+    "settings.ctrlMultiplier.description": "Multiply each wheel adjustment while Ctrl is held (1–100).",
+    "settings.ctrlMultiplier.title": "Ctrl Multiplier",
+    "settings.multiplier.error": "Enter a whole number from 1 to 100.",
+    "settings.preciseInput.description": "Open an exact-value editor when you right-click a supported slider.",
+    "settings.preciseInput.title": "Precise Input",
+    "settings.reverseWheel.description": "Swap the wheel directions used to increase and decrease values.",
+    "settings.reverseWheel.title": "Reverse Wheel Direction",
+    "settings.shiftMultiplier.description": "Multiply each wheel adjustment while Shift is held (1–100).",
+    "settings.shiftMultiplier.title": "Shift Multiplier",
+    "settings.wheelAdjustment.description": "Adjust supported sliders with the mouse wheel while hovering over them.",
+    "settings.wheelAdjustment.title": "Wheel Adjustment"
 } as const;
 
 export type TranslationKey = keyof typeof english;
@@ -37,7 +48,18 @@ const traditionalChinese: Partial<Record<TranslationKey, string>> = {
     "error.nonFinite": "請輸入有限的十進位數字。",
     "modal.range": "允許範圍：{min} 至 {max}",
     "modal.title": "精確設定滑桿數值",
-    "modal.valueLabel": "滑桿數值"
+    "modal.valueLabel": "滑桿數值",
+    "settings.ctrlMultiplier.description": "按住 Ctrl 時，將每次滾輪調整乘上此倍率（1–100）。",
+    "settings.ctrlMultiplier.title": "Ctrl 倍率",
+    "settings.multiplier.error": "請輸入 1 至 100 的整數。",
+    "settings.preciseInput.description": "在支援的滑桿上按右鍵時，開啟精確數值編輯器。",
+    "settings.preciseInput.title": "精確輸入",
+    "settings.reverseWheel.description": "交換滾輪增加與減少數值的方向。",
+    "settings.reverseWheel.title": "反轉滾輪方向",
+    "settings.shiftMultiplier.description": "按住 Shift 時，將每次滾輪調整乘上此倍率（1–100）。",
+    "settings.shiftMultiplier.title": "Shift 倍率",
+    "settings.wheelAdjustment.description": "將游標停在支援的滑桿上時，使用滑鼠滾輪調整數值。",
+    "settings.wheelAdjustment.title": "滾輪調整"
 };
 
 const TRADITIONAL_CHINESE_LOCALES = new Set(["zh-hant", "zh-hk", "zh-mo", "zh-tw"]);
