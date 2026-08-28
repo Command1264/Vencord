@@ -58,9 +58,12 @@ Runtime inspection on Discord Stable `1.0.9255` with Vencord base
 The stable design decisions are recorded in
 [`ADR 0001`](../adr/0001-enhance-the-shared-slider-component.md) and
 [`ADR 0002`](../adr/0002-bind-slider-root-interactions.md).
-The following evidence remains required before release:
-
-- marker sorting, duplicate, and tie behavior beyond the exercised marker contract.
+The marker contract is now closed for this release candidate. Wheel navigation validates that
+the effective marker list is finite, in range, and non-decreasing; invalid lists fail open.
+Navigation scans in the wheel direction for the first strictly different marker, so duplicate
+markers cannot consume an event and an off-marker tie is resolved by user intent rather than a
+stale closest-marker index. Pure-policy coverage includes malformed lists, and temporary runtime
+diagnostics exercised duplicate and equidistant off-marker cases before being removed.
 
 Temporary runtime instrumentation on the same Discord Stable build established that continuous
 wheel, native-keyboard, Precise Input Apply, and Precise Input Enter changes each call
@@ -91,8 +94,9 @@ changes to `commitValue`.
   runtime discovery and must be encapsulated behind one policy function.
 - Normalize arithmetic to the effective step precision; never apply one fixed `toFixed`
   precision to every Slider.
-- With `stickToMarkers`, navigate to the adjacent marker rather than inventing intermediate
-  values.
+- With `stickToMarkers`, validate the effective marker list, then navigate in wheel direction to
+  the first strictly different marker rather than inventing intermediate values. Duplicate
+  markers are skipped; malformed, unsorted, non-finite, or out-of-range lists fail open.
 - Clamp the result at the effective boundaries without showing an error.
 - Call `preventDefault()` only after an eligible Slider event has been successfully handled.
 - After a successful adjustment, show the Slider's native Tooltip using its native
@@ -197,7 +201,8 @@ deduplicated `Logger("BetterSliders")`, and return without suppressing native be
 Status: the component seam, live controlled value, native commit path, VolumeBooster
 boundary, non-passive root listener lifecycle, and handled-wheel page-scroll cancellation
 are verified. Callback order/count and real native context-menu coexistence are also runtime
-verified. Marker sorting, duplicate, and tie cases remain open.
+verified. Marker-list validation, duplicate skipping, and direction-resolved off-marker ties are
+covered by pure-policy tests and targeted runtime diagnostics.
 
 ### Milestone 2 — Pure value policies
 
@@ -207,11 +212,12 @@ verified. Marker sorting, duplicate, and tie cases remain open.
 - Cover dynamic ranges (`0..100`, `0..200`, `0..1000`), negative minima, and fractional
   steps.
 
-Status: the first public-seam suite covers dynamic positive and negative bounds through
-`1000`, direction, modifier priority, reverse direction, fractional precision, marker
-navigation, disabled state, and invalid contracts. Runtime callback coverage is complete for
-the observed continuous and marker interactions. A shared vertical Slider was unavailable in
-the exercised Discord build and remains explicitly unverified.
+Status: the public-seam suite covers dynamic positive and negative bounds through `1000`,
+direction, modifier priority, reverse direction, fractional precision, marker navigation,
+duplicate markers, off-marker ties, malformed marker lists, disabled state, and invalid
+contracts. Runtime callback coverage is complete for the observed continuous and marker
+interactions. A shared vertical Slider was unavailable in the exercised Discord build and
+remains explicitly unverified.
 
 ### Milestone 3 — Precise Input
 
@@ -250,10 +256,11 @@ reverse-wheel behavior, persistence, and consistent native `TextInput.error` val
 - Run unit tests, typecheck, lint, stylelint, plugin list generation, and standalone build.
 - Document all runtime cases not exercised; do not convert assumptions into claims.
 
-The evidence classes, completed results, source-only candidates, and pending runtime matrix
+The evidence classes, completed results, source-only candidates, and compatibility matrix
 are maintained in [`COMPATIBILITY.md`](./COMPATIBILITY.md).
 
-Status: the evidence ledger and static consumer inventory are established. Runtime checks now
+Status: **complete for the named release-candidate baseline.** The evidence ledger and static
+consumer inventory are established. Runtime checks now
 cover a native Discord microphone-volume Slider, VolumeBooster-modified `0..1000` user- and
 stream-volume Sliders, and Vencord continuous, marker, and disabled consumers. User and stream
 volume both passed exact input above 200, upper-bound rejection, boundary commit, and restoration;
@@ -267,10 +274,15 @@ the project owner manually accepted Shift/Ctrl-plus-wheel adjustment on both liv
 volume Sliders. Stream Cancel and native primary-button drag also passed with exact restoration to
 `100`. Temporary runtime instrumentation completed callback order/count coverage for wheel,
 keyboard, pointer, Apply, Enter, Cancel, Escape, clamped no-op, and marker wheel paths, then was
-removed before commit. The final release-candidate automated pipeline passed. The earlier
-mouse-Apply click-through observation remains non-repeatable. Marker sorting, duplicate, and tie
-runtime cases and the explicit pending matrix repetitions remain, so BetterSliders is not
-release-ready.
+removed before commit. A final repeat pass reconfirmed microphone, Vencord continuous/marker/
+disabled, user-volume, and live-stream paths; native Tooltip formatting, context-menu
+coexistence, Modal layering, Escape priority, range validation, endpoint no-ops, and exact value
+restoration all passed. Temporary diagnostic consumers also confirmed duplicate-marker skipping
+and direction-resolved off-marker ties, then were removed before the formal build. The final
+release-candidate automated pipeline passed. The earlier mouse-Apply click-through observation
+remains non-repeatable. BetterSliders is release-ready for this named Discord/Vencord baseline;
+the unavailable vertical-Slider row remains an explicit future compatibility check rather than
+a claimed pass.
 
 ## Acceptance scenarios
 
