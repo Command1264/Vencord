@@ -7,7 +7,8 @@
 import { Flex } from "@components/Flex";
 import { Paragraph } from "@components/Paragraph";
 import { translate, TranslationKey } from "@plugins/betterSliders/i18n";
-import { formatPreciseInputValue, PreciseInputContract, validatePreciseInput,ValidationResult } from "@plugins/betterSliders/validation";
+import { elevateModalAboveMenu, installPreciseInputInteractionGuard } from "@plugins/betterSliders/runtimeUtils";
+import { formatPreciseInputValue, PreciseInputContract, validatePreciseInput, ValidationResult } from "@plugins/betterSliders/validation";
 import { RenderModalProps } from "@vencord/discord-types";
 import { Forms, LocaleStore, Modal, React, TextInput, useEffect, useRef, useState, useStateFromStores } from "@webpack/common";
 
@@ -35,6 +36,7 @@ export function ValueInputModal({ contract, initialValue, modalProps, onCommit }
     const locale = useStateFromStores([LocaleStore], () => LocaleStore.locale);
     const [rawValue, setRawValue] = useState(() => formatPreciseInputValue(initialValue, contract));
     const inputRef = useRef<HTMLInputElement>(null);
+    const layerAnchorRef = useRef<HTMLDivElement>(null);
     const committedRef = useRef(false);
     const id = React.useId();
     const inputId = `vc-better-sliders-value-${id}`;
@@ -49,6 +51,19 @@ export function ValueInputModal({ contract, initialValue, modalProps, onCommit }
         inputRef.current?.focus();
         inputRef.current?.select();
     }, []);
+
+    React.useLayoutEffect(() => {
+        const layerAnchor = layerAnchorRef.current;
+        if (!layerAnchor) return;
+
+        const restoreLayer = elevateModalAboveMenu(layerAnchor);
+        const removeInteractionGuard = installPreciseInputInteractionGuard(window, layerAnchor, modalProps.onClose);
+
+        return () => {
+            removeInteractionGuard();
+            restoreLayer?.();
+        };
+    }, [modalProps.onClose]);
 
     function submit() {
         if (!validation.valid || committedRef.current) return;
@@ -76,36 +91,38 @@ export function ValueInputModal({ contract, initialValue, modalProps, onCommit }
                 }
             ]}
         >
-            <Flex flexDirection="column" gap={8}>
-                <Forms.FormTitle tag="h5">
-                    {translate(locale, "modal.valueLabel")}
-                </Forms.FormTitle>
-                <TextInput
-                    id={inputId}
-                    aria-label={translate(locale, "modal.valueLabel")}
-                    inputMode="decimal"
-                    inputRef={inputRef}
-                    maxLength={64}
-                    value={rawValue}
-                    onChange={setRawValue}
-                    onKeyDown={event => {
-                        if (event.key !== "Enter") return;
+            <div ref={layerAnchorRef}>
+                <Flex flexDirection="column" gap={8}>
+                    <Forms.FormTitle tag="h5">
+                        {translate(locale, "modal.valueLabel")}
+                    </Forms.FormTitle>
+                    <TextInput
+                        id={inputId}
+                        aria-label={translate(locale, "modal.valueLabel")}
+                        inputMode="decimal"
+                        inputRef={inputRef}
+                        maxLength={64}
+                        value={rawValue}
+                        onChange={setRawValue}
+                        onKeyDown={event => {
+                            if (event.key !== "Enter") return;
 
-                        event.preventDefault();
-                        submit();
-                    }}
-                    aria-describedby={errorMessage ? `${rangeId} ${errorId}` : rangeId}
-                    aria-invalid={Boolean(errorMessage)}
-                />
-                <Paragraph id={rangeId} color="text-muted">
-                    {translate(locale, "modal.range", { max: contract.max, min: contract.min })}
-                </Paragraph>
-                {errorMessage && (
-                    <Paragraph id={errorId} color="text-danger" role="alert">
-                        {errorMessage}
+                            event.preventDefault();
+                            submit();
+                        }}
+                        aria-describedby={errorMessage ? `${rangeId} ${errorId}` : rangeId}
+                        aria-invalid={Boolean(errorMessage)}
+                    />
+                    <Paragraph id={rangeId} color="text-muted">
+                        {translate(locale, "modal.range", { max: contract.max, min: contract.min })}
                     </Paragraph>
-                )}
-            </Flex>
+                    {errorMessage && (
+                        <Paragraph id={errorId} color="text-danger" role="alert">
+                            {errorMessage}
+                        </Paragraph>
+                    )}
+                </Flex>
+            </div>
         </Modal>
     );
 }

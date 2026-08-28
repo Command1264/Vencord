@@ -8,17 +8,21 @@ import { addGlobalContextMenuPatch, removeGlobalContextMenuPatch } from "@api/Co
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
-import { LocaleStore, Menu, openModal, React } from "@webpack/common";
+import type { RenderModal } from "@vencord/discord-types";
+import { closeModal, LocaleStore, Menu, openModal, React } from "@webpack/common";
 
 import { ValueInputModal } from "./components/ValueInputModal";
 import { translate } from "./i18n";
+import { createTransientVisibilityController, replacePreciseInputModal, scheduleDetachedCleanup, suppressSecondaryButtonEvent } from "./runtimeUtils";
 import { getBetterSlidersSettings, settings } from "./settings";
 import { EffectiveSliderContract, getWheelAdjustment } from "./sliderUtils";
 import { PreciseInputContract } from "./validation";
 
 interface SliderInstance {
     containerRef: React.RefObject<HTMLDivElement | null>;
+    grabberRef: React.RefObject<HTMLDivElement | null>;
     commitValue(value: number, markerIndex?: number): void;
+    setState(state: Partial<SliderInstance["state"]>): void;
     props: {
         disabled?: boolean;
         keyboardStep?: number;
@@ -26,6 +30,7 @@ interface SliderInstance {
         value?: number;
     };
     state: {
+        active: boolean;
         closestMarkerIndex?: number | null;
         max: number;
         min: number;
@@ -37,6 +42,9 @@ interface SliderInstance {
 const logger = new Logger("BetterSliders");
 const warnedInstances = new WeakSet<object>();
 const bindings = new WeakMap<SliderInstance, SliderBinding>();
+// React hands callback refs through null during a Slider rerender, so timer ownership must
+// outlive an individual root-listener binding.
+const wheelBubbles = new WeakMap<SliderInstance, ReturnType<typeof createTransientVisibilityController>>();
 const activeBindings = new Set<SliderBinding>();
 let isStarted = false;
 
@@ -45,6 +53,7 @@ interface SliderBinding {
     instance: SliderInstance;
     secondaryButtonDownListener: (event: MouseEvent) => void;
     root: HTMLDivElement;
+    wheelBubble: ReturnType<typeof createTransientVisibilityController>;
     wheelListener: (event: WheelEvent) => void;
 }
 
@@ -97,7 +106,10 @@ function getPreciseInputContract(instance: SliderInstance): PreciseInputContract
 }
 
 function openPreciseInput(instance: SliderInstance, contract: PreciseInputContract) {
-    openModal(modalProps => React.createElement(ValueInputModal, {
+    replacePreciseInputModal<RenderModal>({
+        closeModal: key => closeModal(key),
+        openModal: (renderModal, options) => openModal(renderModal, options)
+    }, modalProps => React.createElement(ValueInputModal, {
         contract,
         initialValue: getCurrentValue(instance),
         modalProps,
@@ -138,13 +150,15 @@ function handleSecondaryButtonDown(instance: SliderInstance, event: MouseEvent) 
             || !getBetterSlidersSettings().preciseInput
             || !getPreciseInputContract(instance)) return;
 
-        event.stopPropagation();
+        suppressSecondaryButtonEvent(event);
     } catch (error) {
         warnOnce(instance, error);
     }
 }
 
-function handleWheel(instance: SliderInstance, event: WheelEvent) {
+function handleWheel(binding: SliderBinding, event: WheelEvent) {
+    const { instance } = binding;
+
     try {
         const currentSettings = getBetterSlidersSettings();
         if (!currentSettings.wheelAdjustment) return;
@@ -168,6 +182,7 @@ function handleWheel(instance: SliderInstance, event: WheelEvent) {
 
         instance.commitValue(adjustment.nextValue, adjustment.markerIndex);
         event.preventDefault();
+        binding.wheelBubble.show();
     } catch (error) {
         warnOnce(instance, error);
     }
@@ -225,6 +240,8 @@ export default definePlugin({
         pendingContextMenu = null;
         removeGlobalContextMenuPatch(patchNativeContextMenu);
         for (const binding of [...activeBindings]) {
+            binding.wheelBubble.dispose();
+            wheelBubbles.delete(binding.instance);
             removeBinding(binding);
         }
     },
@@ -235,14 +252,51 @@ export default definePlugin({
         const existing = bindings.get(instance);
         if (existing?.root === root) return;
         if (existing) removeBinding(existing);
-        if (!root || !isStarted) return;
+        if (!root || !isStarted) {
+            if (!root) {
+                // A real unmount stays detached through the microtask; a rerender rebinds first.
+                scheduleDetachedCleanup(() => Boolean(instance.containerRef.current), () => {
+                    wheelBubbles.get(instance)?.dispose();
+                    wheelBubbles.delete(instance);
+                });
+            }
+            return;
+        }
+
+        let wheelBubble = wheelBubbles.get(instance);
+        if (!wheelBubble) {
+            let forcedBubbleVisible = false;
+            wheelBubble = createTransientVisibilityController(visible => {
+                if (visible) {
+                    if (!instance.state.active) {
+                        // Native Slider rendering uses active to force its own formatted Tooltip.
+                        forcedBubbleVisible = true;
+                        instance.setState({ active: true });
+                    }
+                    return;
+                }
+
+                if (forcedBubbleVisible
+                    && instance.containerRef.current
+                    && !instance.grabberRef.current?.matches(":active")) {
+                    instance.setState({ active: false });
+                    instance.grabberRef.current?.dispatchEvent(new MouseEvent("mouseout", {
+                        bubbles: true,
+                        relatedTarget: instance.containerRef.current
+                    }));
+                }
+                forcedBubbleVisible = false;
+            });
+            wheelBubbles.set(instance, wheelBubble);
+        }
 
         const binding: SliderBinding = {
             contextMenuListener: event => handleContextMenu(instance, event),
             instance,
             secondaryButtonDownListener: event => handleSecondaryButtonDown(instance, event),
             root,
-            wheelListener: event => handleWheel(instance, event)
+            wheelBubble,
+            wheelListener: event => handleWheel(binding, event)
         };
         bindings.set(instance, binding);
         activeBindings.add(binding);

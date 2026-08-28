@@ -87,13 +87,25 @@ changes to `commitValue`.
   values.
 - Clamp the result at the effective boundaries without showing an error.
 - Call `preventDefault()` only after an eligible Slider event has been successfully handled.
+- After a successful adjustment, show the Slider's native Tooltip using its native
+  `onValueRender` result (or default formatting). Do not create a duplicate value label.
+- Release wheel-triggered Tooltip visibility 1000 ms after the latest successful wheel event;
+  each later successful event resets the timer. Disabled, invalid, zero-axis, and clamped no-op
+  events do not start or reset it.
 
 ## Precise Input contract
 
 - Open a native Vencord/Discord Modal from a Supported Slider's context-menu interaction,
-  without destroying a pre-existing native context-menu capability.
+  while preserving the open consumer context menu. Temporarily raise the Modal-exclusive
+  ancestor path above the menu without relying on generated Discord classes, and restore the
+  original inline styles when the Modal closes.
 - A secondary-button press must not enter native drag handling or change the Slider before
   Precise Input opens. Primary-button dragging remains native.
+- Register Precise Input under one stable Modal key. A later trigger closes and replaces the
+  previous Precise Input Modal instead of stacking another dialog.
+- While Precise Input is mounted, the first Escape closes it without closing the preserved
+  consumer menu. Secondary-button interaction outside the Modal is inert until the Modal
+  unmounts, after which Discord's native menu behavior resumes.
 - Initialize the field from the live controlled value, safely normalize continuous pointer
   residue to the nearest permitted keyboard step, focus it, and select its contents.
 - Allow intermediate input states while typing. Commit only once on valid Apply or Enter;
@@ -213,8 +225,10 @@ context-menu coexistence case, Escape, marker UI, and additional Slider consumer
 
 Status: English and Traditional Chinese dictionaries, interpolation, explicit locale
 fallback tests, reactive Modal locale subscription, validated persisted settings, and the
-custom localized settings component are implemented. Discord runtime acceptance of the
-settings UI, immediate feature toggles, multipliers, and reverse-wheel behavior remains.
+custom localized settings component are implemented. Discord runtime acceptance passed for
+the settings UI, runtime locale change, immediate feature toggles, Shift/Ctrl multipliers,
+reverse-wheel behavior, persistence, and consistent native `TextInput.error` validation for
+`0`, `101`, and `1.5`.
 
 ### Milestone 5 — Compatibility and release evidence
 
@@ -223,6 +237,22 @@ settings UI, immediate feature toggles, multipliers, and reverse-wheel behavior 
 - Exercise VolumeBooster-modified ranges and at least one non-volume dynamic range.
 - Run unit tests, typecheck, lint, stylelint, plugin list generation, and standalone build.
 - Document all runtime cases not exercised; do not convert assumptions into claims.
+
+The evidence classes, completed results, source-only candidates, and pending runtime matrix
+are maintained in [`COMPATIBILITY.md`](./COMPATIBILITY.md).
+
+Status: the evidence ledger and static consumer inventory are established. Runtime checks now
+cover a native Discord microphone-volume Slider, a VolumeBooster-modified `0..1000` user-volume
+Slider, a live stream-volume Slider, and Vencord continuous, marker, and disabled consumers in
+the dark theme. User volume passed wheel, Precise Input, above-200 input, upper-bound rejection,
+boundary, and native user-menu checks. The stream secondary-button regression was reproduced at
+`73.2688 -> 91.3979`, fixed, then accepted at `182.796`: the value stayed exact and one Precise
+Input dialog opened. A later run at displayed value `183` kept the consumer menu open and showed
+the dialog above its overlapping area. Stable-key replacement is covered by a two-trigger
+coordinator test; the desktop driver cannot issue a right-button double-click for a second runtime
+trigger. Vertical orientation, callback order/count, and light/custom themes also remain
+incomplete. The earlier mouse-Apply click-through observation remains non-repeatable.
+BetterSliders is not release-ready.
 
 ## Acceptance scenarios
 
@@ -242,6 +272,8 @@ settings UI, immediate feature toggles, multipliers, and reverse-wheel behavior 
 12. VolumeBooster-modified final max values appear without a VolumeBooster dependency.
 13. Right-clicking away from the current handle opens Precise Input without first changing
     the Slider value; left-click dragging remains native.
+14. Opening Precise Input preserves its source context menu and renders above it; a later
+    Precise Input trigger replaces the existing dialog so dialogs do not stack.
 
 ## Known constraints
 
