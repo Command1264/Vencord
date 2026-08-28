@@ -5,7 +5,6 @@
  */
 
 export interface EffectiveSliderContract {
-    closestMarkerIndex?: number | null;
     current: number;
     disabled?: boolean;
     keyboardStep: number;
@@ -79,15 +78,21 @@ export function getWheelAdjustment(
 
     if (contract.stickToMarkers) {
         const markers = contract.sortedMarkers;
-        const currentIndex = contract.closestMarkerIndex ?? markers?.indexOf(contract.current) ?? -1;
-        if (!markers?.length || currentIndex < 0) return { handled: false, reason: "invalid-contract" };
-
-        const markerIndex = Math.min(Math.max(currentIndex + direction, 0), markers.length - 1);
-        const nextValue = markers[markerIndex];
-        if (!Number.isFinite(nextValue)) return { handled: false, reason: "invalid-contract" };
-        if (nextValue === contract.current) return { handled: false, reason: "unchanged" };
-
-        return { handled: true, markerIndex, nextValue };
+        if (!markers?.length || markers.some((marker, index) => !Number.isFinite(marker)
+            || marker < contract.min
+            || marker > contract.max
+            || (index > 0 && marker < markers[index - 1]))) {
+            return { handled: false, reason: "invalid-contract" };
+        }
+        let markerIndex = direction > 0 ? 0 : markers.length - 1;
+        while (markerIndex >= 0 && markerIndex < markers.length) {
+            const marker = markers[markerIndex];
+            if (direction > 0 ? marker > contract.current : marker < contract.current) {
+                return { handled: true, markerIndex, nextValue: marker };
+            }
+            markerIndex += direction;
+        }
+        return { handled: false, reason: "unchanged" };
     }
 
     const multiplier = intent.ctrlKey

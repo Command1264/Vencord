@@ -164,7 +164,6 @@ function handleWheel(binding: SliderBinding, event: WheelEvent) {
         if (!currentSettings.wheelAdjustment) return;
 
         const contract: EffectiveSliderContract = {
-            closestMarkerIndex: instance.state.closestMarkerIndex,
             current: getCurrentValue(instance),
             disabled: instance.props.disabled,
             keyboardStep: instance.props.keyboardStep ?? 1,

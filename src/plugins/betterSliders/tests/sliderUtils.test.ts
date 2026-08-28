@@ -93,7 +93,6 @@ describe("getWheelAdjustment", () => {
     it("moves through effective sorted markers one at a time", () => {
         assert.deepEqual(getWheelAdjustment({
             ...baseContract,
-            closestMarkerIndex: 1,
             current: 2,
             sortedMarkers: [1, 2, 4, 8],
             stickToMarkers: true
@@ -101,6 +100,58 @@ describe("getWheelAdjustment", () => {
             handled: true,
             markerIndex: 2,
             nextValue: 4
+        });
+    });
+
+    it("skips duplicate markers so one wheel event still changes the value", () => {
+        assert.deepEqual(getWheelAdjustment({
+            ...baseContract,
+            current: 25,
+            sortedMarkers: [0, 25, 25, 50],
+            stickToMarkers: true
+        }, { deltaY: -1 }, settings), {
+            handled: true,
+            markerIndex: 3,
+            nextValue: 50
+        });
+    });
+
+    it("uses wheel direction to resolve an off-marker tie", () => {
+        const tiedContract = {
+            ...baseContract,
+            current: 3,
+            sortedMarkers: [0, 2, 4, 6],
+            stickToMarkers: true
+        } as const;
+
+        assert.deepEqual(getWheelAdjustment(tiedContract, { deltaY: 1 }, settings), {
+            handled: true,
+            markerIndex: 1,
+            nextValue: 2
+        });
+    });
+
+    it("fails open when the effective marker list is not sorted", () => {
+        assert.deepEqual(getWheelAdjustment({
+            ...baseContract,
+            current: 50,
+            sortedMarkers: [0, 50, 25, 100],
+            stickToMarkers: true
+        }, { deltaY: -1 }, settings), {
+            handled: false,
+            reason: "invalid-contract"
+        });
+    });
+
+    it("fails open when an effective marker falls outside the Slider range", () => {
+        assert.deepEqual(getWheelAdjustment({
+            ...baseContract,
+            current: 50,
+            sortedMarkers: [-1, 50, 100],
+            stickToMarkers: true
+        }, { deltaY: 1 }, settings), {
+            handled: false,
+            reason: "invalid-contract"
         });
     });
 
