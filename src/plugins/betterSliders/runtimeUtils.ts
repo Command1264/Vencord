@@ -19,7 +19,10 @@ interface InteractionEventTarget {
 
 interface PreciseInputModalDependencies<RenderModal> {
     closeModal(key: string): void;
-    openModal(renderModal: RenderModal, options: { modalKey: string; }): string;
+    openModal(renderModal: RenderModal, options: {
+        modalKey: string;
+        onCloseCallback(): void;
+    }): string;
 }
 
 interface Branches<T> {
@@ -36,15 +39,21 @@ interface InlineStyleSnapshot {
     zIndexPriority: string;
 }
 
-interface VisibilityTimerDependencies {
+export interface VisibilityTimerDependencies {
     clearTimeout(timer: unknown): void;
     setTimeout(callback: () => void, delay: number): unknown;
+}
+
+export interface NativeSliderTooltipBoundary {
+    setForceOpen(forceOpen: boolean): void;
 }
 
 const defaultVisibilityTimerDependencies: VisibilityTimerDependencies = {
     clearTimeout: timer => clearTimeout(timer as ReturnType<typeof setTimeout>),
     setTimeout: (callback, delay) => setTimeout(callback, delay)
 };
+
+let activePreciseInputModal: symbol | null = null;
 
 export function createTransientVisibilityController(
     setVisible: (visible: boolean) => void,
@@ -68,6 +77,18 @@ export function createTransientVisibilityController(
             }, duration);
         }
     };
+}
+
+export function createNativeSliderTooltipController(
+    boundary: NativeSliderTooltipBoundary,
+    timers: VisibilityTimerDependencies = defaultVisibilityTimerDependencies,
+    duration = 1000
+) {
+    return createTransientVisibilityController(
+        forceOpen => boundary.setForceOpen(forceOpen),
+        timers,
+        duration
+    );
 }
 
 export function scheduleDetachedCleanup(
@@ -123,8 +144,20 @@ export function replacePreciseInputModal<RenderModal>(
     dependencies: PreciseInputModalDependencies<RenderModal>,
     renderModal: RenderModal
 ) {
-    dependencies.closeModal(PRECISE_INPUT_MODAL_KEY);
-    return dependencies.openModal(renderModal, { modalKey: PRECISE_INPUT_MODAL_KEY });
+    if (activePreciseInputModal) dependencies.closeModal(PRECISE_INPUT_MODAL_KEY);
+
+    const request = activePreciseInputModal = Symbol(PRECISE_INPUT_MODAL_KEY);
+    try {
+        return dependencies.openModal(renderModal, {
+            modalKey: PRECISE_INPUT_MODAL_KEY,
+            onCloseCallback: () => {
+                if (activePreciseInputModal === request) activePreciseInputModal = null;
+            }
+        });
+    } catch (error) {
+        if (activePreciseInputModal === request) activePreciseInputModal = null;
+        throw error;
+    }
 }
 
 export function findDivergingBranches<T extends { parentElement: T | null; }>(

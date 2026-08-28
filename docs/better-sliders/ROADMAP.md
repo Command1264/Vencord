@@ -89,6 +89,8 @@ changes to `commitValue`.
 - Call `preventDefault()` only after an eligible Slider event has been successfully handled.
 - After a successful adjustment, show the Slider's native Tooltip using its native
   `onValueRender` result (or default formatting). Do not create a duplicate value label.
+- If a Slider shape does not render a native hover value bubble, preserve that native behavior
+  instead of introducing a BetterSliders-only label.
 - Release wheel-triggered Tooltip visibility 1000 ms after the latest successful wheel event;
   each later successful event resets the timer. Disabled, invalid, zero-axis, and clamped no-op
   events do not start or reset it.

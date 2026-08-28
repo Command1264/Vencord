@@ -13,7 +13,7 @@ import { closeModal, LocaleStore, Menu, openModal, React } from "@webpack/common
 
 import { ValueInputModal } from "./components/ValueInputModal";
 import { translate } from "./i18n";
-import { createTransientVisibilityController, replacePreciseInputModal, scheduleDetachedCleanup, suppressSecondaryButtonEvent } from "./runtimeUtils";
+import { createNativeSliderTooltipController, replacePreciseInputModal, scheduleDetachedCleanup, suppressSecondaryButtonEvent } from "./runtimeUtils";
 import { getBetterSlidersSettings, settings } from "./settings";
 import { EffectiveSliderContract, getWheelAdjustment } from "./sliderUtils";
 import { PreciseInputContract } from "./validation";
@@ -44,7 +44,7 @@ const warnedInstances = new WeakSet<object>();
 const bindings = new WeakMap<SliderInstance, SliderBinding>();
 // React hands callback refs through null during a Slider rerender, so timer ownership must
 // outlive an individual root-listener binding.
-const wheelBubbles = new WeakMap<SliderInstance, ReturnType<typeof createTransientVisibilityController>>();
+const wheelBubbles = new WeakMap<SliderInstance, ReturnType<typeof createNativeSliderTooltipController>>();
 const activeBindings = new Set<SliderBinding>();
 let isStarted = false;
 
@@ -53,7 +53,7 @@ interface SliderBinding {
     instance: SliderInstance;
     secondaryButtonDownListener: (event: MouseEvent) => void;
     root: HTMLDivElement;
-    wheelBubble: ReturnType<typeof createTransientVisibilityController>;
+    wheelBubble: ReturnType<typeof createNativeSliderTooltipController>;
     wheelListener: (event: WheelEvent) => void;
 }
 
@@ -266,26 +266,27 @@ export default definePlugin({
         let wheelBubble = wheelBubbles.get(instance);
         if (!wheelBubble) {
             let forcedBubbleVisible = false;
-            wheelBubble = createTransientVisibilityController(visible => {
-                if (visible) {
-                    if (!instance.state.active) {
-                        // Native Slider rendering uses active to force its own formatted Tooltip.
-                        forcedBubbleVisible = true;
-                        instance.setState({ active: true });
+            wheelBubble = createNativeSliderTooltipController({
+                setForceOpen: forceOpen => {
+                    if (forceOpen) {
+                        if (!instance.state.active) {
+                            forcedBubbleVisible = true;
+                            instance.setState({ active: true });
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                if (forcedBubbleVisible
-                    && instance.containerRef.current
-                    && !instance.grabberRef.current?.matches(":active")) {
-                    instance.setState({ active: false });
-                    instance.grabberRef.current?.dispatchEvent(new MouseEvent("mouseout", {
-                        bubbles: true,
-                        relatedTarget: instance.containerRef.current
-                    }));
+                    if (forcedBubbleVisible
+                        && instance.containerRef.current
+                        && !instance.grabberRef.current?.matches(":active")) {
+                        instance.setState({ active: false });
+                        instance.grabberRef.current?.dispatchEvent(new MouseEvent("mouseout", {
+                            bubbles: true,
+                            relatedTarget: instance.containerRef.current
+                        }));
+                    }
+                    forcedBubbleVisible = false;
                 }
-                forcedBubbleVisible = false;
             });
             wheelBubbles.set(instance, wheelBubble);
         }

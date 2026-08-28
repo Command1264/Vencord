@@ -37,6 +37,8 @@ After a successful wheel commit, the coordinator temporarily acquires the Slider
 `onValueRender` contract (or its native default) without BetterSliders duplicating formatting
 or generated markup. The coordinator releases only the state it acquired 1000 ms after the
 latest handled wheel event, and plugin stop or a confirmed unmount cancels pending work.
+Consumers such as `stickToMarkers` Sliders that do not render a native hover value bubble remain
+unchanged; BetterSliders does not invent a second label for those consumers.
 
 Right-click records a pending Precise Input action and lets the event bubble. If Discord
 opens a context menu synchronously, the global context-menu patch consumes the pending

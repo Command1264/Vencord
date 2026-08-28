@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+    createNativeSliderTooltipController,
     createTransientVisibilityController,
     findDivergingBranches,
     installPreciseInputInteractionGuard,
@@ -78,26 +79,36 @@ describe("suppressSecondaryButtonEvent", () => {
 });
 
 describe("replacePreciseInputModal", () => {
-    it("preserves the context menu and replaces the previous Precise Input", () => {
+    it("preserves an existing parent modal and replaces only a known Precise Input", () => {
         const calls: string[] = [];
+        const closeCallbacks: Array<() => void> = [];
         const renderModal = () => null;
         const dependencies = {
             closeModal: (key: string) => calls.push(`close-modal:${key}`),
-            openModal: (_render: typeof renderModal, options: { modalKey: string; }) => {
+            openModal: (_render: typeof renderModal, options: { modalKey: string; onCloseCallback(): void; }) => {
                 calls.push(`open-modal:${options.modalKey}`);
+                closeCallbacks.push(options.onCloseCallback);
                 return options.modalKey;
             }
         };
 
         replacePreciseInputModal(dependencies, renderModal);
         replacePreciseInputModal(dependencies, renderModal);
+        closeCallbacks[0]();
+        replacePreciseInputModal(dependencies, renderModal);
+        closeCallbacks[1]();
+        closeCallbacks[2]();
+        replacePreciseInputModal(dependencies, renderModal);
 
         assert.deepEqual(calls, [
+            `open-modal:${PRECISE_INPUT_MODAL_KEY}`,
             `close-modal:${PRECISE_INPUT_MODAL_KEY}`,
             `open-modal:${PRECISE_INPUT_MODAL_KEY}`,
             `close-modal:${PRECISE_INPUT_MODAL_KEY}`,
+            `open-modal:${PRECISE_INPUT_MODAL_KEY}`,
             `open-modal:${PRECISE_INPUT_MODAL_KEY}`
         ]);
+        closeCallbacks[3]();
     });
 });
 
@@ -227,6 +238,56 @@ describe("createTransientVisibilityController", () => {
 
         assert.deepEqual(cleared, [42]);
         assert.deepEqual(visibility, [true, false]);
+    });
+});
+
+describe("createNativeSliderTooltipController", () => {
+    it("forces the native Tooltip open for 1000 ms", () => {
+        const forceOpenChanges: boolean[] = [];
+        const callbacks = new Map<number, () => void>();
+        let nextTimer = 1;
+        const controller = createNativeSliderTooltipController({
+            setForceOpen: forceOpen => forceOpenChanges.push(forceOpen)
+        }, {
+            clearTimeout: timer => callbacks.delete(timer as number),
+            setTimeout: callback => {
+                const timer = nextTimer++;
+                callbacks.set(timer, callback);
+                return timer;
+            }
+        });
+
+        controller.show();
+        callbacks.get(1)?.();
+
+        assert.deepEqual(forceOpenChanges, [true, false]);
+    });
+
+    it("resets the release timer and closes the forced Tooltip on disposal", () => {
+        const forceOpenChanges: boolean[] = [];
+        const cleared: number[] = [];
+        const callbacks = new Map<number, () => void>();
+        let nextTimer = 1;
+        const controller = createNativeSliderTooltipController({
+            setForceOpen: forceOpen => forceOpenChanges.push(forceOpen)
+        }, {
+            clearTimeout: timer => {
+                cleared.push(timer as number);
+                callbacks.delete(timer as number);
+            },
+            setTimeout: callback => {
+                const timer = nextTimer++;
+                callbacks.set(timer, callback);
+                return timer;
+            }
+        });
+
+        controller.show();
+        controller.show();
+        controller.dispose();
+
+        assert.deepEqual(cleared, [1, 2]);
+        assert.deepEqual(forceOpenChanges, [true, true, false]);
     });
 });
 

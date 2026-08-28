@@ -47,6 +47,7 @@ document are limited to that build and the explicitly named consumers.
 | Stream secondary-button regression and fix | Before the fix, right-clicking the visible stream-volume handle changed `73.2688` to the pointer-derived `91.3979`. After suppression was added, the same context-menu path at `182.796` opened one Precise Input dialog while the exact live value remained `182.796`. A later layering run opened at displayed value `183` without changing it. | Reproducible regression followed by runtime acceptance on the same Discord Stable build. The later run kept the source stream menu open and showed the Modal above its overlapping area. |
 | Precise Input Modal coordination | Opening Precise Input from a user-volume menu kept the native menu visible beneath the Modal. The first Escape closed only Precise Input, a second Escape closed the preserved menu, and a secondary-button press on the dimmed background left both surfaces open. | Runtime verified for event priority, background-menu inertness, and restoration of native menu behavior after Modal close. Layering and single-dialog replacement remain covered by the earlier stream run and coordinator test. |
 | Native wheel value feedback | A user-volume wheel step displayed Discord's native `105%` Tooltip even though the pointer was on the track away from the grabber. The Tooltip disappeared after the 1000 ms ownership window, and the test volume was restored exactly to `110`. | Runtime verified on the named Stable baseline for native percent formatting, transient visibility, ref-rerender survival, and state restoration. Consumer-provided custom `onValueRender` output still needs a separate runtime pass. |
+| Custom native wheel value feedback | A Notification Timeout wheel step displayed the consumer's native `5.06s` value bubble. After the 1000 ms ownership window, visibility returned to Discord's normal hover behavior; the value was restored to `5s`. Notification Log Limit was also restored to `50` after marker-slider diagnostics. | Runtime verified on the named Stable baseline for a consumer-formatted continuous Slider. The marker Slider does not render a native hover bubble, so BetterSliders deliberately adds no duplicate label. |
 
 ## User-reported manual acceptance
 
@@ -142,7 +143,7 @@ must rerun the relevant checks before release.
 
 | Validation | Recorded result | Scope caveat |
 | --- | --- | --- |
-| `pnpm test:better-sliders` | **Passed: 35/35** in the current working tree after the event-priority and native wheel-tooltip changes. | Pure BetterSliders suites only. |
+| `pnpm test:better-sliders` | **Passed: 37/37** in the current working tree after the event-priority and native wheel-tooltip changes. | Pure BetterSliders suites only. |
 | TypeScript (`pnpm testTsc`) | **Passed** in the current working tree after the menu-preserving layer fix. | Reported implementation check. |
 | ESLint (`pnpm lint src/plugins/betterSliders`) | **Passed** in the current working tree after the menu-preserving layer fix. | Plugin-scoped lint result. |
 | Discord desktop build (`pnpm build`) | **Passed** in the current working tree after the menu-preserving layer fix. | Build success is not a consumer compatibility run. |
