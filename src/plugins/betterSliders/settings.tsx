@@ -8,7 +8,7 @@ import { definePluginSettings } from "@api/Settings";
 import { FormSwitch } from "@components/FormSwitch";
 import { Margins } from "@utils/margins";
 import { OptionType } from "@utils/types";
-import { Forms, LocaleStore, Text, TextInput, useEffect, useState, useStateFromStores } from "@webpack/common";
+import { Forms, LocaleStore, TextInput, useEffect, useState, useStateFromStores } from "@webpack/common";
 
 import { translate, TranslationKey } from "./i18n";
 import { DEFAULT_BETTER_SLIDERS_SETTINGS, resolveBetterSlidersSettings } from "./settingsUtils";
@@ -26,7 +26,6 @@ interface MultiplierSettingProps {
 function MultiplierSetting({ descriptionKey, locale, settingKey, titleKey, value }: MultiplierSettingProps) {
     const [input, setInput] = useState(String(value));
     const [hasError, setHasError] = useState(false);
-    const errorId = `vc-better-sliders-${settingKey}-error`;
 
     useEffect(() => {
         setInput(String(value));
@@ -49,21 +48,14 @@ function MultiplierSetting({ descriptionKey, locale, settingKey, titleKey, value
             <Forms.FormTitle tag="h5">{translate(locale, titleKey)}</Forms.FormTitle>
             <Forms.FormText className={Margins.bottom8}>{translate(locale, descriptionKey)}</Forms.FormText>
             <TextInput
-                aria-describedby={hasError ? errorId : undefined}
+                aria-invalid={hasError}
                 aria-label={translate(locale, titleKey)}
+                error={hasError ? translate(locale, "settings.multiplier.error") : undefined}
                 inputMode="numeric"
-                max={100}
-                min={1}
                 onChange={handleChange}
-                step={1}
-                type="number"
+                type="text"
                 value={input}
             />
-            {hasError && (
-                <Text id={errorId} color="text-danger" variant="text-sm/normal">
-                    {translate(locale, "settings.multiplier.error")}
-                </Text>
-            )}
         </section>
     );
 }
