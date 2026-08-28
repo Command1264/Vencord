@@ -244,17 +244,20 @@ The evidence classes, completed results, source-only candidates, and pending run
 are maintained in [`COMPATIBILITY.md`](./COMPATIBILITY.md).
 
 Status: the evidence ledger and static consumer inventory are established. Runtime checks now
-cover a native Discord microphone-volume Slider, a VolumeBooster-modified `0..1000` user-volume
-Slider, a live stream-volume Slider, and Vencord continuous, marker, and disabled consumers in
-the dark theme. User volume passed wheel, Precise Input, above-200 input, upper-bound rejection,
-boundary, and native user-menu checks. The stream secondary-button regression was reproduced at
-`73.2688 -> 91.3979`, fixed, then accepted at `182.796`: the value stayed exact and one Precise
-Input dialog opened. A later run at displayed value `183` kept the consumer menu open and showed
-the dialog above its overlapping area. Stable-key replacement is covered by a two-trigger
-coordinator test; the desktop driver cannot issue a right-button double-click for a second runtime
-trigger. Vertical orientation, callback order/count, and light/custom themes also remain
-incomplete. The earlier mouse-Apply click-through observation remains non-repeatable.
-BetterSliders is not release-ready.
+cover a native Discord microphone-volume Slider, VolumeBooster-modified `0..1000` user- and
+stream-volume Sliders, and Vencord continuous, marker, and disabled consumers. User and stream
+volume both passed exact input above 200, upper-bound rejection, boundary commit, and restoration;
+stream ordinary wheel and secondary-button suppression also passed while preserving its native
+menu. Dark, Discord Light, and the installed Vencord Local Theme `Fallout 4 Terminal` were visually
+accepted, after which the user's original Dark preset and disabled Local Theme state were restored.
+A source and UI search found no shared vertical Slider on this build, so that row is explicitly
+recorded as unavailable rather than passed. Stable-key replacement is covered by a two-trigger
+coordinator test. Although the desktop driver cannot hold Shift/Ctrl while sending a wheel event,
+the project owner manually accepted Shift/Ctrl-plus-wheel adjustment on both live-stream and user-
+volume Sliders. Stream Cancel and native primary-button drag also passed with exact restoration to
+`100`. Callback order/count remains incomplete. The final release-candidate automated pipeline
+passed. The earlier mouse-Apply click-through observation remains non-repeatable. BetterSliders is
+not release-ready.
 
 ## Acceptance scenarios
 
