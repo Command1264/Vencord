@@ -33,35 +33,40 @@ change behavior; it never writes directly to feature stores or visual handle sty
 
 ## Effective Slider Contract discovery
 
-Static repository evidence establishes that Discord's shared Slider is a stateful class and
-that its live value is stored in instance state. Its props expose `initialValue`,
+Static repository evidence establishes that Discord's shared Slider is a stateful class.
+Its props expose `initialValue`,
 `defaultValue`, `minValue`, `maxValue`, `keyboardStep`, `markers`, `stickToMarkers`,
 `disabled`, `getAriaValueText`, `onValueChange`, and `asValueChanges`.
 
 Runtime inspection on Discord Stable `1.0.9255` with Vencord base
 `bc680139be4526aa5525d33fbac8a271eb0cfd02` established that:
 
-- live values and effective bounds are available as `state.value`, `state.min`, and
-  `state.max`;
+- the authoritative live value of a controlled Slider is available as final `props.value`;
+  `state.value` can lag after a native commit, while `state.min` and `state.max` hold the
+  effective bounds;
 - effective sorted markers and the closest marker index are maintained in instance state;
 - the observed defaults are `minValue: 0`, `maxValue: 100`, and `keyboardStep: 1`;
 - native `commitValue(value, markerIndex?)` updates state and invokes the component's native
   change callbacks only when the committed value differs;
-- a root `onWheel` injection anchored beside `handleKeyDown` receives actual Slider wheel
-  events; and
+- the root is an `animated.div` with `containerRef`, and has no native root
+  `onContextMenu` in the observed build;
+- a composed root ref can attach a non-passive native wheel listener and clean it up without
+  DOM discovery; and
 - VolumeBooster changes caller-supplied maximum expressions, so the Slider's final runtime
   props/state are the correct compatibility boundary.
 
-The stable design decision is recorded in
-[`docs/adr/0001-enhance-the-shared-slider-component.md`](../adr/0001-enhance-the-shared-slider-component.md).
+The stable design decisions are recorded in
+[`ADR 0001`](../adr/0001-enhance-the-shared-slider-component.md) and
+[`ADR 0002`](../adr/0002-bind-slider-root-interactions.md).
 The following evidence remains required before release:
 
 - callback order/count for drag, keyboard, and discrete changes;
 - marker sorting, duplicate, tie, and off-marker behavior;
-- existing root context-menu behavior;
-- reliable page-scroll cancellation for handled wheel events. The automated synthetic-wheel
-  smoke test reached the handler but did not prove cancellation, so this is not yet an
-  accepted runtime behavior.
+- a real consumer-provided native context menu for coexistence coverage.
+
+Discord Stable acceptance verified that a handled speaker-volume wheel event changed the
+displayed value while the Voice & Video page position stayed fixed. A React synthetic
+handler did not meet that requirement; the accepted non-passive root binding did.
 
 Code must not call both callbacks merely because both are present; it delegates discrete
 changes to `commitValue`.
@@ -87,7 +92,8 @@ changes to `commitValue`.
 
 - Open a native Vencord/Discord Modal from a Supported Slider's context-menu interaction,
   without destroying a pre-existing native context-menu capability.
-- Initialize the field from the live current value, focus it, and select its contents.
+- Initialize the field from the live controlled value, safely normalize continuous pointer
+  residue to the nearest permitted keyboard step, focus it, and select its contents.
 - Allow intermediate input states while typing. Commit only once on valid Apply or Enter;
   Cancel and Escape never invoke a Slider callback.
 - Trim surrounding whitespace. Empty input has its own validation reason.
@@ -164,9 +170,10 @@ deduplicated `Logger("BetterSliders")`, and return without suppressing native be
 - Implement one wheel event → one native logical adjustment for dynamic integer ranges.
 - Verify final props reflect VolumeBooster without any named integration.
 
-Status: the component seam, live contract, native commit path, and VolumeBooster boundary
-are verified. Page-scroll cancellation, callback-count comparison, marker edge cases, and
-context-menu coexistence remain open.
+Status: the component seam, live controlled value, native commit path, VolumeBooster
+boundary, non-passive root listener lifecycle, and handled-wheel page-scroll cancellation
+are verified. Callback-count comparison, marker edge cases, and a real native context-menu
+coexistence case remain open.
 
 ### Milestone 2 — Pure value policies
 
@@ -188,15 +195,21 @@ callback-count coverage remain.
   disabled Apply, and localized errors.
 - Add marker-only validation and safe value formatting.
 
-Status: strict decimal syntax, finite/range/step/marker validation, and their pure tests are
-implemented. Context-menu integration, Modal UI, safe display formatting, and runtime
-acceptance remain.
+Status: strict decimal syntax, finite/range/step/marker validation, safe display formatting,
+and their pure tests are implemented. Discord Stable runtime acceptance covers direct
+right-click fallback, initial focus/select, Traditional Chinese UI and range errors,
+disabled Apply, valid Enter commit, and Cancel without commit. A real native context-menu
+coexistence case, Escape, marker UI, and additional Slider consumers remain.
 
 ### Milestone 4 — Localization and settings
 
 - Add English and Traditional Chinese dictionaries and explicit fallback tests.
 - Subscribe Modal and custom settings UI to Discord locale changes.
 - Add validated feature toggles, multipliers, and reverse-wheel behavior.
+
+Status: English and Traditional Chinese dictionaries, interpolation, explicit locale
+fallback tests, and reactive Modal locale subscription are implemented. Persisted settings
+and the custom localized settings component remain.
 
 ### Milestone 5 — Compatibility and release evidence
 
@@ -229,12 +242,13 @@ acceptance remain.
 - Fake DOM/CSS sliders are out of scope.
 - Hidden business scaling not exposed by the UI Slider contract is out of scope.
 - Discord bundle changes can invalidate the patch; failure must leave native Sliders intact.
-- Runtime claims remain provisional until exercised against the current Discord build.
+- Runtime claims are limited to the Discord Stable build and Slider contexts explicitly
+  listed in the delivery evidence.
 
 ## Delivery checklist
 
 - Report unit, type, lint, style, plugin-list, and standalone-build results separately.
 - Report which Discord Slider contexts were exercised and which remain untested.
 - Report branch, Worktree, commit, push, PR, merge, and cleanup state explicitly.
-- Do not call the plugin release-ready while any Milestone 5 scenario or the handled-wheel
-  page-scroll requirement remains unverified.
+- Do not call the plugin release-ready while required Milestone 5 compatibility scenarios
+  remain unverified.

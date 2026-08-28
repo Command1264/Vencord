@@ -35,6 +35,46 @@ function nearlyEqual(left: number, right: number) {
     return Math.abs(left - right) <= Number.EPSILON * scale * 8;
 }
 
+function decimalPlaces(value: number) {
+    const text = value.toString().toLowerCase();
+    const [coefficient, exponentText] = text.split("e");
+    const exponent = Number(exponentText ?? 0);
+    const fractionLength = coefficient.split(".")[1]?.length ?? 0;
+
+    return Math.max(0, fractionLength - exponent);
+}
+
+export function formatPreciseInputValue(value: number, contract: PreciseInputContract) {
+    if (!Number.isFinite(value)) return String(value);
+    if (!Number.isFinite(contract.min)
+        || !Number.isFinite(contract.max)
+        || contract.min > contract.max
+        || value < contract.min
+        || value > contract.max) {
+        return String(value);
+    }
+
+    if (contract.stickToMarkers) {
+        const marker = contract.markers?.find(candidate => Number.isFinite(candidate) && nearlyEqual(candidate, value));
+        return String(marker ?? value);
+    }
+
+    const step = contract.keyboardStep;
+    if (step == null || !Number.isFinite(step) || step <= 0) return String(value);
+
+    const requestedStepCount = Math.round((value - contract.min) / step);
+    const maximumStepRatio = (contract.max - contract.min) / step;
+    const maximumStepCount = nearlyEqual(maximumStepRatio, Math.round(maximumStepRatio))
+        ? Math.round(maximumStepRatio)
+        : Math.floor(maximumStepRatio);
+    const stepCount = Math.min(Math.max(requestedStepCount, 0), maximumStepCount);
+    const normalized = contract.min + stepCount * step;
+    const precision = Math.min(15, Math.max(decimalPlaces(step), decimalPlaces(contract.min)));
+    const rounded = Number(normalized.toFixed(precision));
+
+    return String(Object.is(rounded, -0) ? 0 : rounded);
+}
+
 export function validatePreciseInput(raw: string, contract: PreciseInputContract): ValidationResult {
     if (!Number.isFinite(contract.min)
         || !Number.isFinite(contract.max)

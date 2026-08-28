@@ -11,9 +11,10 @@ DOM discovery is unstable because Discord class names and markup are generated. 
 integration with individual feature stores would duplicate business rules and would not
 scale to unknown Slider consumers.
 
-Repository inspection and a Discord Stable `1.0.9255` runtime probe showed that the shared
-Slider class owns the live value and effective range in instance state. Its native
-`commitValue` method updates state and invokes the component's configured callbacks. The
+Repository inspection and Discord Stable `1.0.9255` runtime probes showed that the shared
+Slider class owns the effective contract. Controlled Sliders expose the authoritative live
+value through final props while instance state owns the effective range and marker data.
+Its native `commitValue` method updates state and invokes the component's configured callbacks. The
 VolumeBooster plugin changes values before they reach the shared Slider, so final instance
 props/state already represent the effective contract.
 
@@ -53,5 +54,5 @@ increasing compatibility risk.
 - Discord bundle changes may break the source patch, so the patch needs a stable anchor and
   runtime smoke coverage.
 - Only consumers of the shared Slider are supported.
-- Page-scroll cancellation and native context-menu coexistence remain release blockers
-  until verified in the current Discord runtime.
+- Native listener lifecycle and page-scroll cancellation follow ADR 0002. Context-menu
+  coexistence remains a compatibility blocker until exercised with a real consumer menu.

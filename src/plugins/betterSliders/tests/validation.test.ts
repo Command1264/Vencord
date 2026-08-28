@@ -7,7 +7,29 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { validatePreciseInput } from "@plugins/betterSliders/validation";
+import { formatPreciseInputValue, validatePreciseInput } from "@plugins/betterSliders/validation";
+
+describe("formatPreciseInputValue", () => {
+    it("formats a live continuous value to the nearest permitted keyboard step", () => {
+        assert.equal(formatPreciseInputValue(98.82352941176471, { keyboardStep: 1, max: 200, min: 0 }), "99");
+        assert.equal(formatPreciseInputValue(0.30000000000000004, { keyboardStep: 0.1, max: 1, min: 0 }), "0.3");
+        assert.equal(formatPreciseInputValue(1, { keyboardStep: 0.6, max: 1, min: 0 }), "0.6");
+    });
+
+    it("preserves an effective marker value", () => {
+        assert.equal(formatPreciseInputValue(4, {
+            markers: [1, 2, 4, 8],
+            max: 8,
+            min: 1,
+            stickToMarkers: true
+        }), "4");
+    });
+
+    it("does not silently clamp an out-of-range live value", () => {
+        assert.equal(formatPreciseInputValue(-0.2, { keyboardStep: 1, max: 100, min: 0 }), "-0.2");
+        assert.equal(formatPreciseInputValue(101.2, { keyboardStep: 1, max: 100, min: 0 }), "101.2");
+    });
+});
 
 describe("validatePreciseInput", () => {
     it("accepts complete ordinary decimal notation", () => {
