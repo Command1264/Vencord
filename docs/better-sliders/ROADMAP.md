@@ -284,6 +284,28 @@ remains non-repeatable. BetterSliders is release-ready for this named Discord/Ve
 the unavailable vertical-Slider row remains an explicit future compatibility check rather than
 a claimed pass.
 
+### Milestone 6 — Portable UserPlugin distribution
+
+- Produce a deterministic source archive that extracts directly to
+  `src/userplugins/betterSliders`.
+- Remove fork-global author and self-import dependencies from the packaged runtime source.
+- Include package-local installation, removal, recovery, compatibility, license, provenance, and
+  checksum information.
+- Reject release packaging unless the tree is clean and `HEAD` has the matching verified tag.
+- Prove the archive builds from `src/userplugins` in a clean checkout of the pinned upstream
+  Vencord commit.
+
+Status: the source-only packaging command, deterministic ZIP, SHA-256 sidecar, manifest, release
+guards, and package-local documentation are implemented. From
+`src/userplugins/betterSliders`, the resulting archive passed scoped lint, TypeScript checking,
+standalone build, and the repository plugin-list regression gate (which intentionally omits
+UserPlugins from its published official-plugin list) on upstream Vencord
+`bc680139be4526aa5525d33fbac8a271eb0cfd02`. This proves source portability without GitHub
+Actions. Discord runtime behavior remains supported by the identical fork source and the existing
+release-candidate evidence; loading the separately packaged UserPlugin in Discord is not yet
+recorded as a distinct runtime acceptance result. See
+[`USERPLUGIN-DISTRIBUTION.md`](./USERPLUGIN-DISTRIBUTION.md).
+
 ## Acceptance scenarios
 
 1. `0..100`, current `50`: wheel up produces `51`; wheel down returns to `50`.

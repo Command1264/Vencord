@@ -15,7 +15,13 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
     { ignores: ["dist", "browser", "packages/vencord-types"] },
     {
-        files: ["src/**/*.{tsx,ts,mts,mjs,js,jsx}", "eslint.config.mjs"],
+        files: [
+            "src/**/*.{tsx,ts,mts,mjs,js,jsx}",
+            "scripts/generatePluginList.ts",
+            "scripts/packageBetterSlidersUserplugin.mjs",
+            "scripts/tests/packageBetterSlidersUserplugin.test.mjs",
+            "eslint.config.mjs"
+        ],
         settings: {
             react: {
                 version: "18"
@@ -31,7 +37,13 @@ export default tseslint.config(
         }
     },
     {
-        files: ["src/**/*.{tsx,ts,mts,mjs,js,jsx}", "eslint.config.mjs"],
+        files: [
+            "src/**/*.{tsx,ts,mts,mjs,js,jsx}",
+            "scripts/generatePluginList.ts",
+            "scripts/packageBetterSlidersUserplugin.mjs",
+            "scripts/tests/packageBetterSlidersUserplugin.test.mjs",
+            "eslint.config.mjs"
+        ],
         plugins: {
             "simple-header": header,
             "@stylistic": stylistic,
@@ -144,6 +156,14 @@ export default tseslint.config(
             "simple-import-sort/exports": "error",
             "unused-imports/no-unused-imports": "error",
             "path-alias/no-relative": "error"
+        }
+    },
+    {
+        // BetterSliders is packaged unchanged under src/userplugins, where @plugins/* does not
+        // resolve to its own source tree. Keep this exception local to the portable package.
+        files: ["src/plugins/betterSliders/**/*.{tsx,ts}"],
+        rules: {
+            "path-alias/no-relative": "off"
         }
     }
 );

@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { translate } from "@plugins/betterSliders/i18n";
+import { translate } from "../i18n";
 
 describe("translate", () => {
     it("renders English and interpolates named values", () => {
