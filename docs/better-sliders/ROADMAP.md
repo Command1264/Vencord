@@ -301,9 +301,14 @@ guards, and package-local documentation are implemented. From
 standalone build, and the repository plugin-list regression gate (which intentionally omits
 UserPlugins from its published official-plugin list) on upstream Vencord
 `bc680139be4526aa5525d33fbac8a271eb0cfd02`. This proves source portability without GitHub
-Actions. Discord runtime behavior remains supported by the identical fork source and the existing
-release-candidate evidence; loading the separately packaged UserPlugin in Discord is not yet
-recorded as a distinct runtime acceptance result. See
+Actions. The separately packaged `0.1.0-dev` archive from source commit
+`a502a955b62c2f084bd5a19428ed4dd2b08df774` was then injected from that clean upstream checkout
+and accepted on Discord Stable `1.0.9255`: Vencord listed BetterSliders as an enabled new plugin,
+opened its settings, retained the existing persisted settings after restart, moved microphone
+volume `100 -> 99 -> 100` with native percentage feedback, and kept the native audio menu beneath
+Precise Input while one Escape closed only the Modal. This records the portable UserPlugin path as
+a distinct runtime pass; the broader consumer matrix remains supported by the identical-source
+release-candidate evidence. See
 [`USERPLUGIN-DISTRIBUTION.md`](./USERPLUGIN-DISTRIBUTION.md).
 
 ## Acceptance scenarios
