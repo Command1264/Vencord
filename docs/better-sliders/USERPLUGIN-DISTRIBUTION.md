@@ -91,3 +91,7 @@ shasum -a 256 better-sliders-userplugin-v0.1.0-rc.2.zip
 
 After verification, follow the `README.md` contained in the archive. Updates and removal remain
 manual and require rebuilding Vencord.
+
+The authoritative end-user installation, update, removal, and troubleshooting tutorial is
+[`distribution/better-sliders-userplugin/README.md`](../../distribution/better-sliders-userplugin/README.md).
+The packaging command copies that guide into the root of every BetterSliders UserPlugin archive.
