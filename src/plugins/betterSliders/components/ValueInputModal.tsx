@@ -6,11 +6,12 @@
 
 import { Flex } from "@components/Flex";
 import { Paragraph } from "@components/Paragraph";
-import { translate, TranslationKey } from "@plugins/betterSliders/i18n";
-import { elevateModalAboveMenu, installPreciseInputInteractionGuard } from "@plugins/betterSliders/runtimeUtils";
-import { formatPreciseInputValue, PreciseInputContract, validatePreciseInput, ValidationResult } from "@plugins/betterSliders/validation";
 import { RenderModalProps } from "@vencord/discord-types";
 import { Forms, LocaleStore, Modal, React, TextInput, useEffect, useRef, useState, useStateFromStores } from "@webpack/common";
+
+import { translate, TranslationKey } from "../i18n";
+import { elevateModalAboveMenu, installPreciseInputInteractionGuard } from "../runtimeUtils";
+import { formatPreciseInputValue, PreciseInputContract, validatePreciseInput, ValidationResult } from "../validation";
 
 interface ValueInputModalProps {
     contract: PreciseInputContract;

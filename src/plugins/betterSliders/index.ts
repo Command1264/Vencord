@@ -5,7 +5,6 @@
  */
 
 import { addGlobalContextMenuPatch, removeGlobalContextMenuPatch } from "@api/ContextMenu";
-import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
 import type { RenderModal } from "@vencord/discord-types";
@@ -218,7 +217,10 @@ function patchNativeContextMenu(_navId: string, children: Array<React.ReactEleme
 export default definePlugin({
     name: "BetterSliders",
     description: "Enhances Discord sliders with precise right-click value input and mouse-wheel adjustment.",
-    authors: [Devs.Command1264],
+    authors: [{
+        name: "Command1264",
+        id: 306858118891962369n
+    }],
     settings,
 
     patches: [{

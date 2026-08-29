@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { resolveBetterSlidersSettings } from "@plugins/betterSliders/settingsUtils";
+import { resolveBetterSlidersSettings } from "../settingsUtils";
 
 describe("resolveBetterSlidersSettings", () => {
     it("provides the documented defaults when no settings were persisted", () => {

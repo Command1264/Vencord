@@ -284,6 +284,33 @@ remains non-repeatable. BetterSliders is release-ready for this named Discord/Ve
 the unavailable vertical-Slider row remains an explicit future compatibility check rather than
 a claimed pass.
 
+### Milestone 6 — Portable UserPlugin distribution
+
+- Produce a deterministic source archive that extracts directly to
+  `src/userplugins/betterSliders`.
+- Remove fork-global author and self-import dependencies from the packaged runtime source.
+- Include package-local installation, removal, recovery, compatibility, license, provenance, and
+  checksum information.
+- Reject release packaging unless the tree is clean and `HEAD` has the matching verified tag.
+- Prove the archive builds from `src/userplugins` in a clean checkout of the pinned upstream
+  Vencord commit.
+
+Status: the source-only packaging command, deterministic ZIP, SHA-256 sidecar, manifest, release
+guards, and package-local documentation are implemented. From
+`src/userplugins/betterSliders`, the resulting archive passed scoped lint, TypeScript checking,
+standalone build, and the repository plugin-list regression gate (which intentionally omits
+UserPlugins from its published official-plugin list) on upstream Vencord
+`bc680139be4526aa5525d33fbac8a271eb0cfd02`. This proves source portability without GitHub
+Actions. The separately packaged `0.1.0-dev` archive from source commit
+`a502a955b62c2f084bd5a19428ed4dd2b08df774` was then injected from that clean upstream checkout
+and accepted on Discord Stable `1.0.9255`: Vencord listed BetterSliders as an enabled new plugin,
+opened its settings, retained the existing persisted settings after restart, moved microphone
+volume `100 -> 99 -> 100` with native percentage feedback, and kept the native audio menu beneath
+Precise Input while one Escape closed only the Modal. This records the portable UserPlugin path as
+a distinct runtime pass; the broader consumer matrix remains supported by the identical-source
+release-candidate evidence. See
+[`USERPLUGIN-DISTRIBUTION.md`](./USERPLUGIN-DISTRIBUTION.md).
+
 ## Acceptance scenarios
 
 1. `0..100`, current `50`: wheel up produces `51`; wheel down returns to `50`.

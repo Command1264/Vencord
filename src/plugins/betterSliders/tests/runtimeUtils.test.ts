@@ -16,7 +16,7 @@ import {
     replacePreciseInputModal,
     scheduleDetachedCleanup,
     suppressSecondaryButtonEvent
-} from "@plugins/betterSliders/runtimeUtils";
+} from "../runtimeUtils";
 
 class TestEventTarget {
     listeners = new Map<string, Set<EventListenerOrEventListenerObject>>();

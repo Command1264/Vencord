@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getWheelAdjustment } from "@plugins/betterSliders/sliderUtils";
+import { getWheelAdjustment } from "../sliderUtils";
 
 const baseContract = {
     current: 50,

@@ -30,8 +30,10 @@
         "lint": "eslint",
         "lint-styles": "stylelint \"src/**/*.css\" --ignore-pattern src/userplugins",
         "lint:fix": "pnpm lint --fix",
+        "package:better-sliders-userplugin": "node scripts/packageBetterSlidersUserplugin.mjs",
         "test": "pnpm buildStandalone && pnpm testTsc && pnpm lint && pnpm lint-styles && pnpm generatePluginJson",
         "test:better-sliders": "tsx --test src/plugins/betterSliders/tests/*.test.ts",
+        "test:better-sliders-package": "node --test scripts/tests/packageBetterSlidersUserplugin.test.mjs",
         "testWeb": "pnpm lint && pnpm buildWeb && pnpm testTsc",
         "testTsc": "tsc --noEmit"
     },

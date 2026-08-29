@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { formatPreciseInputValue, validatePreciseInput } from "@plugins/betterSliders/validation";
+import { formatPreciseInputValue, validatePreciseInput } from "../validation";
 
 describe("formatPreciseInputValue", () => {
     it("formats a live continuous value to the nearest permitted keyboard step", () => {
